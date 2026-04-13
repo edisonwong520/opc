@@ -66,6 +66,16 @@ docker compose up --build
 
 本项目只支持 OpenClaw。当前本机部署记录、验证命令、常见维护命令见 [docs/openclaw-deployment.md](docs/openclaw-deployment.md)。
 
+一键准备 OpenClaw 和模型配置：
+
+```bash
+cp .env.example .env
+# 填写 AI_BASE_URL、AI_API_KEY、AI_MODEL
+python3 scripts/bootstrap_openclaw.py
+```
+
+脚本会复用已有 OpenClaw；如果本机还没有 OpenClaw，则自动安装 CLI、部署本机 Gateway，并按 `.env` 配置默认模型。
+
 ## MVP 范围
 
 - CEO Command: 输入单一战略指令

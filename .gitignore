@@ -15,6 +15,7 @@ dist/
 # Local env
 .env
 backend/.env
+.openclaw-config.batch.json
 
 # Runtime
 *.log

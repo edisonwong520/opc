@@ -130,6 +130,53 @@ python3 scripts/sync_openclaw_env.py
 
 这两个文件已被 `.gitignore` 忽略，不会提交真实 token。
 
+## Model Configuration
+
+OpenClaw 模型配置参考 `wanny` 的后端 `.env` 约定，使用 OpenAI-compatible 三元组：
+
+```bash
+AI_BASE_URL=https://api.deepseek.com/v1
+AI_API_KEY=sk-your-ai-key-here
+AI_MODEL=deepseek-chat
+```
+
+当前开发机已从 `/Users/edison/code/python/wanny/backend/.env` 读取到：
+
+- `AI_BASE_URL`
+- `AI_API_KEY`
+- `AI_MODEL`
+
+并配置为 OpenClaw provider：
+
+- provider id: `ceodesk`
+- default model: `ceodesk/<AI_MODEL>`
+- API adapter: `openai-completions`
+
+推荐用户只维护项目根目录 `.env`，然后运行：
+
+```bash
+python3 scripts/bootstrap_openclaw.py
+```
+
+脚本行为：
+
+- 如果没有安装 OpenClaw CLI，则执行 `npm install -g openclaw@latest`。
+- 如果没有 `~/.openclaw/openclaw.json`，则自动部署本机 OpenClaw Gateway。
+- 如果已经存在 OpenClaw 配置，则不会重新部署，只同步 Gateway auth 和模型配置。
+- 如果本机存在 `wanny/backend/.env` 且项目 `.env` 缺少 `AI_*`，会自动补齐缺失的模型配置。
+- 将 Gateway token 同步到 `.env` 和 `backend/.env`。
+- 将 `AI_*` 写入本机 OpenClaw 配置，供 launchd Gateway 服务使用。
+- 设置 OpenClaw 默认模型为 `ceodesk/<AI_MODEL>`。
+
+验证模型：
+
+```bash
+openclaw models status --json
+openclaw models list --provider ceodesk
+```
+
+注意：模型 API key 会保存在本机 OpenClaw 配置目录中，不提交到 Git。不要把 `.env`、`backend/.env` 或 `~/.openclaw` 里的密钥复制进文档或 issue。
+
 当前 CEO Desk 只展示 Gateway 配置和 MVP briefing。下一步接入时，应在后端新增 OpenClaw Gateway client/service，不要在 Django view 里直接拼 RPC 调用。
 
 建议后续对接顺序：
