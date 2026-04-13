@@ -158,6 +158,26 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+function getCsrfToken(): string {
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split("=");
+    if (name === "csrftoken") {
+      return value;
+    }
+  }
+  return "";
+}
+
+function headersWithCsrf(extraHeaders?: Record<string, string>): Record<string, string> {
+  const csrfToken = getCsrfToken();
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (csrfToken) {
+    headers["X-CSRFToken"] = csrfToken;
+  }
+  return headers;
+}
+
 export async function fetchSession(): Promise<SessionInfo> {
   const response = await fetch(`${API_BASE_URL}/api/opc/auth/me/`);
   if (!response.ok) {
@@ -181,6 +201,7 @@ export async function login(username: string, password: string): Promise<Session
 export async function logout(): Promise<SessionInfo> {
   const response = await fetch(`${API_BASE_URL}/api/opc/auth/logout/`, {
     method: "POST",
+    headers: headersWithCsrf(),
   });
   if (!response.ok) {
     throw new Error("Unable to sign out.");
@@ -211,7 +232,7 @@ export async function fetchBriefing(): Promise<DeskBriefing> {
 export async function createCommand(command: string): Promise<Mission> {
   const response = await fetch(`${API_BASE_URL}/api/opc/commands/`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: headersWithCsrf(JSON_HEADERS),
     body: JSON.stringify({ command }),
   });
   if (!response.ok) {
@@ -299,7 +320,7 @@ export interface TemplateInput {
 export async function createTemplate(data: TemplateInput): Promise<ExecutiveAgent> {
   const response = await fetch(`${API_BASE_URL}/api/opc/templates/`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: headersWithCsrf(JSON_HEADERS),
     body: JSON.stringify(data),
   });
   if (!response.ok) {
@@ -311,7 +332,7 @@ export async function createTemplate(data: TemplateInput): Promise<ExecutiveAgen
 export async function updateTemplate(id: string, data: Partial<TemplateInput>): Promise<ExecutiveAgent> {
   const response = await fetch(`${API_BASE_URL}/api/opc/templates/${id}/`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: headersWithCsrf(JSON_HEADERS),
     body: JSON.stringify(data),
   });
   if (!response.ok) {
@@ -323,6 +344,7 @@ export async function updateTemplate(id: string, data: Partial<TemplateInput>): 
 export async function deleteTemplate(id: string): Promise<{ deleted: string }> {
   const response = await fetch(`${API_BASE_URL}/api/opc/templates/${id}/`, {
     method: "DELETE",
+    headers: headersWithCsrf(),
   });
   if (!response.ok) {
     throw new Error("Unable to delete template.");
@@ -333,7 +355,7 @@ export async function deleteTemplate(id: string): Promise<{ deleted: string }> {
 export async function approveMission(id: string, notes?: string): Promise<Mission> {
   const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/approve/`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: headersWithCsrf(JSON_HEADERS),
     body: JSON.stringify({ notes }),
   });
   if (!response.ok) {
@@ -345,7 +367,7 @@ export async function approveMission(id: string, notes?: string): Promise<Missio
 export async function rejectMission(id: string, notes?: string): Promise<Mission> {
   const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/reject/`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: headersWithCsrf(JSON_HEADERS),
     body: JSON.stringify({ notes }),
   });
   if (!response.ok) {
@@ -357,6 +379,7 @@ export async function rejectMission(id: string, notes?: string): Promise<Mission
 export async function retryMission(id: string): Promise<Mission> {
   const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/retry/`, {
     method: "POST",
+    headers: headersWithCsrf(),
   });
   if (!response.ok) {
     throw new Error("Unable to retry mission.");
@@ -367,6 +390,7 @@ export async function retryMission(id: string): Promise<Mission> {
 export async function abortMission(id: string): Promise<Mission> {
   const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/abort/`, {
     method: "POST",
+    headers: headersWithCsrf(),
   });
   if (!response.ok) {
     throw new Error("Unable to abort mission.");
@@ -377,6 +401,7 @@ export async function abortMission(id: string): Promise<Mission> {
 export async function archiveMission(id: string): Promise<Mission> {
   const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/archive/`, {
     method: "POST",
+    headers: headersWithCsrf(),
   });
   if (!response.ok) {
     throw new Error("Unable to archive mission.");
@@ -387,6 +412,7 @@ export async function archiveMission(id: string): Promise<Mission> {
 export async function retryWorkstream(missionId: string, workstreamId: number): Promise<Mission> {
   const response = await fetch(`${API_BASE_URL}/api/opc/missions/${missionId}/workstreams/${workstreamId}/retry/`, {
     method: "POST",
+    headers: headersWithCsrf(),
   });
   if (!response.ok) {
     throw new Error("Unable to retry workstream.");
@@ -415,7 +441,7 @@ export async function fetchInvitations(): Promise<{ invitations: Invitation[] }>
 export async function createInvitation(email: string, role: string, expiresInDays?: number): Promise<Invitation> {
   const response = await fetch(`${API_BASE_URL}/api/opc/invitations/create/`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: headersWithCsrf(JSON_HEADERS),
     body: JSON.stringify({ email, role, expiresInDays }),
   });
   if (!response.ok) {
@@ -427,6 +453,7 @@ export async function createInvitation(email: string, role: string, expiresInDay
 export async function revokeInvitation(invitationId: string): Promise<{ revoked: string }> {
   const response = await fetch(`${API_BASE_URL}/api/opc/invitations/${invitationId}/revoke/`, {
     method: "DELETE",
+    headers: headersWithCsrf(),
   });
   if (!response.ok) {
     throw new Error("Unable to revoke invitation.");

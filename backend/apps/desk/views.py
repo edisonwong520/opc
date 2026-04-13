@@ -4,10 +4,12 @@ import uuid
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .models import AgentTemplate, ApprovalDecision, AuditLog, FounderProfile, Invitation, Mission, Organization, QualityGate, Workstream
@@ -38,6 +40,21 @@ def _json_payload(request) -> tuple[dict, JsonResponse | None]:
         return json.loads(request.body.decode("utf-8") or "{}"), None
     except json.JSONDecodeError:
         return {}, JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+
+def _rate_limit(key: str, max_requests: int = 10, window_seconds: int = 60) -> JsonResponse | None:
+    """Simple cache-based rate limiting. Returns error response if limit exceeded."""
+    count = cache.get(key, 0)
+    if count >= max_requests:
+        return JsonResponse({"error": "Too many requests. Please try again later."}, status=429)
+    cache.set(key, count + 1, window_seconds)
+    return None
+
+
+def _rate_limit_key(request, action: str) -> str:
+    """Generate rate limit key based on IP and action."""
+    ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
+    return f"ratelimit:{action}:{ip}"
 
 
 def _organization_for_request(request) -> Organization:
@@ -113,13 +130,20 @@ def _audit(request, action: str, entity_type: str, entity_id: str, metadata: dic
 
 
 @require_GET
+@ensure_csrf_cookie
 def auth_me(request):
+    """Returns session info and ensures CSRF cookie is set."""
     return JsonResponse(_serialize_session(request))
 
 
 @csrf_exempt
 @require_POST
 def auth_login(request):
+    """Login endpoint - exempted because CSRF cookie may not be set yet."""
+    rate_error = _rate_limit(_rate_limit_key(request, "login"), max_requests=5, window_seconds=60)
+    if rate_error:
+        return rate_error
+
     payload, error = _json_payload(request)
     if error:
         return error
@@ -139,9 +163,9 @@ def auth_login(request):
     return JsonResponse(_serialize_session(request))
 
 
-@csrf_exempt
 @require_POST
 def auth_logout(request):
+    """Logout endpoint - requires CSRF protection since user is authenticated."""
     user_id = str(request.user.id) if request.user.is_authenticated else ""
     _audit(request, "auth.logout", "User", user_id or "anonymous")
     logout(request)
@@ -151,6 +175,11 @@ def auth_logout(request):
 @csrf_exempt
 @require_POST
 def auth_bootstrap(request):
+    """Bootstrap endpoint - exempted because no users exist yet."""
+    rate_error = _rate_limit(_rate_limit_key(request, "bootstrap"), max_requests=3, window_seconds=300)
+    if rate_error:
+        return rate_error
+
     if User.objects.exists():
         return JsonResponse({"error": "Bootstrap is only available before the first user exists."}, status=409)
     payload, error = _json_payload(request)
@@ -161,6 +190,9 @@ def auth_bootstrap(request):
     organization_name = str(payload.get("organizationName", "Default OPC")).strip() or "Default OPC"
     if not username or not password:
         return JsonResponse({"error": "`username` and `password` are required."}, status=400)
+
+    if len(password) < 8:
+        return JsonResponse({"error": "Password must be at least 8 characters."}, status=400)
 
     user = User.objects.create_user(username=username, password=password)
     organization, _ = Organization.objects.get_or_create(slug="default", defaults={"name": organization_name})
@@ -197,7 +229,6 @@ def briefing(request):
     )
 
 
-@csrf_exempt
 @require_POST
 def create_command(request):
     error = _role_error(request, OPERATE_ROLES)
@@ -329,7 +360,6 @@ def template_detail(_request, template_id):
     return JsonResponse(serialize_agent_template(template))
 
 
-@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def template_create(request):
     if request.method == "GET":
@@ -369,7 +399,6 @@ def template_create(request):
     return JsonResponse(serialize_agent_template(template), status=201 if created else 200)
 
 
-@csrf_exempt
 @require_http_methods(["GET", "POST", "DELETE"])
 def template_update(request, template_id):
     if request.method == "GET":
@@ -419,7 +448,6 @@ def _coerce_tools(value):
     return []
 
 
-@csrf_exempt
 @require_POST
 def mission_approve(request, mission_id):
     error = _role_error(request, FOUNDER_ROLES)
@@ -449,7 +477,6 @@ def mission_approve(request, mission_id):
     return JsonResponse(serialize_mission(mission, include_events=True))
 
 
-@csrf_exempt
 @require_POST
 def mission_reject(request, mission_id):
     error = _role_error(request, FOUNDER_ROLES)
@@ -479,7 +506,6 @@ def mission_reject(request, mission_id):
     return JsonResponse(serialize_mission(mission, include_events=True))
 
 
-@csrf_exempt
 @require_POST
 def mission_retry(request, mission_id):
     error = _role_error(request, OPERATE_ROLES)
@@ -504,7 +530,6 @@ def mission_retry(request, mission_id):
     return JsonResponse(serialize_mission(mission, include_events=True))
 
 
-@csrf_exempt
 @require_POST
 def mission_abort(request, mission_id):
     error = _role_error(request, OPERATE_ROLES)
@@ -522,7 +547,6 @@ def mission_abort(request, mission_id):
     return JsonResponse(serialize_mission(mission, include_events=True))
 
 
-@csrf_exempt
 @require_POST
 def mission_archive(request, mission_id):
     error = _role_error(request, OPERATE_ROLES)
@@ -538,7 +562,6 @@ def mission_archive(request, mission_id):
     return JsonResponse(serialize_mission(mission, include_events=True))
 
 
-@csrf_exempt
 @require_POST
 def workstream_retry(request, mission_id, workstream_id):
     error = _role_error(request, OPERATE_ROLES)
@@ -626,7 +649,6 @@ def invitation_list(request):
     return JsonResponse({"invitations": [_serialize_invitation(inv) for inv in invitations]})
 
 
-@csrf_exempt
 @require_POST
 def invitation_create(request):
     error = _role_error(request, FOUNDER_ROLES)
@@ -662,6 +684,11 @@ def invitation_create(request):
 @csrf_exempt
 @require_POST
 def invitation_accept(request, token: str):
+    """Accept invitation endpoint - exempted because user may not be authenticated yet."""
+    rate_error = _rate_limit(_rate_limit_key(request, "invitation_accept"), max_requests=5, window_seconds=60)
+    if rate_error:
+        return rate_error
+
     try:
         invitation = Invitation.objects.get(token=token, status=Invitation.Status.PENDING)
     except Invitation.DoesNotExist:
@@ -681,6 +708,9 @@ def invitation_accept(request, token: str):
     if not username or not password:
         return JsonResponse({"error": "`username` and `password` are required."}, status=400)
 
+    if len(password) < 8:
+        return JsonResponse({"error": "Password must be at least 8 characters."}, status=400)
+
     if User.objects.filter(username=username).exists():
         return JsonResponse({"error": "Username already taken."}, status=409)
 
@@ -694,7 +724,6 @@ def invitation_accept(request, token: str):
     return JsonResponse(_serialize_session(request), status=201)
 
 
-@csrf_exempt
 @require_http_methods(["DELETE"])
 def invitation_revoke(request, invitation_id: str):
     error = _role_error(request, FOUNDER_ROLES)
