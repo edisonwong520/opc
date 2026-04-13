@@ -4,7 +4,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env", override=True)
+# Load .env from project root (parent of backend directory)
+load_dotenv(BASE_DIR.parent / ".env", override=True)
 
 
 def env_bool(name: str, default: bool = False) -> bool:

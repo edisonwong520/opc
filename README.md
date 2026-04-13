@@ -23,8 +23,8 @@ For commercial use, closed-source integration, private deployment licensing, or 
 ### 1. Backend
 
 ```bash
-cd backend
 cp .env.example .env
+cd backend
 uv sync
 uv run python manage.py migrate
 uv run python manage.py runserver 0.0.0.0:8000
@@ -58,7 +58,7 @@ This starts the backend on `8000` and the frontend on `5173`.
 ## Docker
 
 ```bash
-cp backend/.env.example backend/.env
+cp .env.example .env
 docker compose up --build
 ```
 

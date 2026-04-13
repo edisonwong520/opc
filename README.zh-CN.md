@@ -23,8 +23,8 @@ OPC（One Person Company）是一个只面向 OpenClaw 的多 Agent 编排管理
 ### 1. 后端
 
 ```bash
-cd backend
 cp .env.example .env
+cd backend
 uv sync
 uv run python manage.py migrate
 uv run python manage.py runserver 0.0.0.0:8000
@@ -58,7 +58,7 @@ npm run dev
 ## Docker
 
 ```bash
-cp backend/.env.example backend/.env
+cp .env.example .env
 docker compose up --build
 ```
 
