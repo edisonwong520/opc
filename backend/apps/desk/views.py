@@ -74,6 +74,7 @@ def briefing(_request):
             "positioning": "OpenClaw 生态专属的 CEO 管理桌面",
             "gateway": settings.OPENCLAW_GATEWAY_URL,
             "integration": "OpenClaw Gateway",
+            "authMode": settings.OPENCLAW_GATEWAY_AUTH_MODE,
             "team": EXECUTIVE_TEAM,
             "pipeline": TASK_PIPELINE,
             "metrics": {

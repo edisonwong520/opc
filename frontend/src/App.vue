@@ -81,7 +81,7 @@ onMounted(loadBriefing);
             </div>
             <div class="runtime">
               <span>{{ briefing.integration }}</span>
-              <small>{{ briefing.gateway }}</small>
+              <small>{{ briefing.gateway }} · {{ briefing.authMode }}</small>
             </div>
           </header>
 

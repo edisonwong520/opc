@@ -110,7 +110,25 @@ openclaw logs
 
 ```bash
 OPENCLAW_GATEWAY_URL=ws://127.0.0.1:7788
+OPENCLAW_GATEWAY_AUTH_MODE=token
+OPENCLAW_GATEWAY_TOKEN=<local-token>
+OPENCLAW_GATEWAY_PASSWORD=
 ```
+
+当前 Gateway 使用 token 登录，没有设置 password。访问 `http://localhost:7788/chat?session=main` 时，使用 `~/.openclaw/openclaw.json` 中的 `gateway.auth.token`。
+
+为了避免手动复制 token，可以同步到本项目未提交的 `.env` 文件：
+
+```bash
+python3 scripts/sync_openclaw_env.py
+```
+
+该脚本会写入：
+
+- `.env`
+- `backend/.env`
+
+这两个文件已被 `.gitignore` 忽略，不会提交真实 token。
 
 当前 CEO Desk 只展示 Gateway 配置和 MVP briefing。下一步接入时，应在后端新增 OpenClaw Gateway client/service，不要在 Django view 里直接拼 RPC 调用。
 

@@ -19,6 +19,7 @@ export interface DeskBriefing {
   positioning: string;
   gateway: string;
   integration: string;
+  authMode: string;
   team: ExecutiveAgent[];
   pipeline: PipelineStep[];
   metrics: {
