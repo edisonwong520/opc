@@ -19,4 +19,4 @@ COPY backend/ ./
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uv run python manage.py migrate && uv run daphne -b 0.0.0.0 -p 8000 ceo_desk_server.asgi:application"]
+CMD ["sh", "-c", "uv run python manage.py migrate && uv run daphne -b 0.0.0.0 -p 8000 opc_server.asgi:application"]

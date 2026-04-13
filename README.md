@@ -1,8 +1,8 @@
-# CEO Desk
+# OPC
 
 Language: English | [Chinese](README.zh-CN.md)
 
-CEO Desk is an OpenClaw-only multi-agent orchestration desk. It turns one executive command into coordinated work across a preset AI leadership team: CEO, COO, CTO, CFO, CMO, and SRE.
+OPC (One Person Company) is an OpenClaw-only multi-agent orchestration desk. It turns one founder command into coordinated work across a preset AI leadership team: CEO, COO, CTO, CFO, CMO, and SRE.
 
 This repository is the MVP scaffold. Its stack follows the local `wanny` project:
 
@@ -34,7 +34,7 @@ Check the API:
 
 ```bash
 curl http://127.0.0.1:8000/api/health/
-curl http://127.0.0.1:8000/api/desk/briefing/
+curl http://127.0.0.1:8000/api/opc/briefing/
 ```
 
 ### 2. Frontend
@@ -66,7 +66,7 @@ Open http://127.0.0.1:8080.
 
 ## OpenClaw
 
-CEO Desk only supports OpenClaw. Deployment notes, verification commands, and maintenance commands live in [docs/openclaw-deployment.md](docs/openclaw-deployment.md).
+OPC only supports OpenClaw. Deployment notes, verification commands, and maintenance commands live in [docs/openclaw-deployment.md](docs/openclaw-deployment.md).
 
 Prepare OpenClaw and model configuration:
 
@@ -80,7 +80,7 @@ The script reuses an existing OpenClaw installation. If OpenClaw is missing, it 
 
 ## MVP Scope
 
-- CEO Command: enter one executive command
+- Founder Command: enter one executive command
 - Executive Team: CEO/COO/CTO/CFO/CMO/SRE role template
 - Mission Pipeline: Intake, Decomposition, Parallel Work, Quality Gate, Board Brief
 - Cost/Risk Placeholder: budget, quality gates, and runtime configuration placeholders
@@ -91,10 +91,10 @@ The script reuses an existing OpenClaw installation. If OpenClaw is missing, it 
 
 ```text
 backend/
-  ceo_desk_server/     Django project
-  apps/desk/           CEO Desk API app
+  opc_server/     Django project
+  apps/desk/           OPC API app
 frontend/
-  src/App.vue          CEO Desk workspace
+  src/App.vue          OPC workspace
   src/lib/api.ts       API client
 docker/                Container build and nginx config
 docs/                  Product and architecture docs

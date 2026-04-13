@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env", override=True)
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-ceo-desk-dev-key-change-me")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-opc-dev-key-change-me")
 DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 ALLOWED_HOSTS = [
     host.strip()
@@ -38,7 +38,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "ceo_desk_server.urls"
+ROOT_URLCONF = "opc_server.urls"
 
 TEMPLATES = [
     {
@@ -55,8 +55,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "ceo_desk_server.wsgi.application"
-ASGI_APPLICATION = "ceo_desk_server.asgi.application"
+WSGI_APPLICATION = "opc_server.wsgi.application"
+ASGI_APPLICATION = "opc_server.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
@@ -76,7 +76,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": DB_ENGINE,
-            "NAME": os.getenv("DB_NAME", "ceo_desk"),
+            "NAME": os.getenv("DB_NAME", "opc"),
             "USER": os.getenv("DB_USER", "root"),
             "PASSWORD": os.getenv("DB_PASSWORD", ""),
             "HOST": os.getenv("DB_HOST", "127.0.0.1"),

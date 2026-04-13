@@ -1,10 +1,10 @@
-# CEO Desk Architecture
+# OPC Architecture
 
 Language: English | [Chinese](architecture.zh-CN.md)
 
 ## Product Direction
 
-CEO Desk is a CEO-facing operating desk for an OpenClaw-powered AI organization. It is not a generic technical dashboard. The user enters a business goal, and the system coordinates roles, decomposes work, executes agent turns, checks quality, and returns an executive brief.
+OPC (One Person Company) is a founder-facing operating desk for an OpenClaw-powered AI organization. It is not a generic technical dashboard. The user enters a business goal, and the system coordinates roles, decomposes work, executes agent turns, checks quality, and returns an executive brief.
 
 ## Tech Choice
 
@@ -26,7 +26,7 @@ The market research mentioned Next.js and React Flow as possible options. This s
 
 Returns basic service health.
 
-### `GET /api/desk/briefing/`
+### `GET /api/opc/briefing/`
 
 Returns initial workspace data:
 
@@ -38,7 +38,7 @@ Returns initial workspace data:
 - execution pipeline
 - MVP metrics
 
-### `POST /api/desk/commands/`
+### `POST /api/opc/commands/`
 
 Creates a `Mission`, starts a background OpenClaw agent turn, and returns the mission record.
 
@@ -52,19 +52,19 @@ Current flow:
 6. Store final response, raw result, token usage, and quality gate results
 7. Stream mission events through WebSocket
 
-### `GET /api/desk/missions/<mission_id>/`
+### `GET /api/opc/missions/<mission_id>/`
 
 Returns mission status, events, quality gates, result text, and token usage.
 
-### `GET /api/desk/openclaw/health/`
+### `GET /api/opc/openclaw/health/`
 
 Returns Gateway health and model provider health.
 
-### `GET /api/desk/openclaw/logs/`
+### `GET /api/opc/openclaw/logs/`
 
 Returns recent OpenClaw Gateway logs from the CLI log reader.
 
-### `GET /api/desk/openclaw/cost/`
+### `GET /api/opc/openclaw/cost/`
 
 Returns Gateway usage-cost data when the local Gateway pairing scope allows it. Mission-level token usage is still captured directly from `openclaw agent --json`.
 
@@ -120,7 +120,7 @@ Environment boundary:
 
 The first screen is the working desk:
 
-- left rail: CEO Command
+- left rail: Founder Command
 - main board: Gateway/model status, org map, metrics, mission pipeline
 - mission console: live events, quality gates, result text, and token usage
 

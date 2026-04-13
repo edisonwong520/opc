@@ -2,9 +2,9 @@
 
 Language: English | [Chinese](openclaw-deployment.zh-CN.md)
 
-CEO Desk only supports OpenClaw. It does not support any other agent runtime.
+OPC only supports OpenClaw. It does not support any other agent runtime.
 
-This document records the local OpenClaw deployment baseline for CEO Desk.
+This document records the local OpenClaw deployment baseline for OPC.
 
 ## Current Deployment
 
@@ -75,7 +75,7 @@ Notes:
 - `--auth-choice skip` deploys the Gateway without configuring a model provider during onboarding.
 - `--gateway-bind loopback` keeps access local to the machine.
 - `--gateway-auth token` protects the Gateway. The token stays in local OpenClaw config and is never committed.
-- `--skip-channels` skips Telegram, Discord, WhatsApp, and similar channels. CEO Desk only needs the Gateway.
+- `--skip-channels` skips Telegram, Discord, WhatsApp, and similar channels. OPC only needs the Gateway.
 
 ## Verify
 
@@ -94,7 +94,7 @@ Expected:
 Current non-blocking `doctor` notes:
 
 - The Gateway service uses Node from nvm. If Node is upgraded later, reinstall the Gateway service.
-- The bundled Discord voice dependency is not installed. Discord channels are not enabled, so this does not affect CEO Desk.
+- The bundled Discord voice dependency is not installed. Discord channels are not enabled, so this does not affect OPC.
 
 ## Service Commands
 
@@ -106,7 +106,7 @@ openclaw gateway start
 openclaw logs
 ```
 
-## CEO Desk Configuration
+## OPC Configuration
 
 The backend points to OpenClaw Gateway through `OPENCLAW_GATEWAY_URL`:
 
@@ -146,8 +146,8 @@ On this development machine, the bootstrap script can fill missing values from `
 
 The script configures OpenClaw as:
 
-- provider id: `ceodesk`
-- default model: `ceodesk/<AI_MODEL>`
+- provider id: `opc`
+- default model: `opc/<AI_MODEL>`
 - API adapter: `openai-completions`
 
 Recommended user flow:
@@ -164,33 +164,33 @@ Script behavior:
 - If `wanny/backend/.env` exists and this project `.env` is missing `AI_*`, it fills the missing model settings.
 - It syncs Gateway token into `.env` and `backend/.env`.
 - It writes `AI_*` into local OpenClaw config for the launchd Gateway service.
-- It sets the OpenClaw default model to `ceodesk/<AI_MODEL>`.
+- It sets the OpenClaw default model to `opc/<AI_MODEL>`.
 
 Verify the model:
 
 ```bash
 openclaw models status --json
-openclaw models list --provider ceodesk
+openclaw models list --provider opc
 ```
 
 Model API keys are stored in local OpenClaw config and local `.env` files. Do not copy `.env`, `backend/.env`, or `~/.openclaw` secrets into docs, issues, or commits.
 
-## CEO Desk OpenClaw Integration
+## OPC OpenClaw Integration
 
 The integration is implemented as:
 
-1. Gateway health probe: `GET /api/desk/openclaw/health/`
+1. Gateway health probe: `GET /api/opc/openclaw/health/`
 2. Token handling: local `.env` and `backend/.env`, both ignored by Git
-3. Mission adapter: `POST /api/desk/commands/` creates a Mission and calls `openclaw agent`
+3. Mission adapter: `POST /api/opc/commands/` creates a Mission and calls `openclaw agent`
 4. Streaming logs: `ws://<host>/ws/missions/<mission_id>/logs/`
 5. Cost and quality gates: Mission records token usage and gateway/model/result/cost gates
 
-## CEO Desk OpenClaw API
+## OPC OpenClaw API
 
 ### Health
 
 ```bash
-curl http://127.0.0.1:8000/api/desk/openclaw/health/
+curl http://127.0.0.1:8000/api/opc/openclaw/health/
 ```
 
 Returns:
@@ -203,7 +203,7 @@ Returns:
 ### Create Mission
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/desk/commands/ \
+curl -X POST http://127.0.0.1:8000/api/opc/commands/ \
   -H 'Content-Type: application/json' \
   -d '{"command":"Reply exactly: integration-ok"}'
 ```
@@ -219,7 +219,7 @@ Backend behavior:
 ### Mission Detail
 
 ```bash
-curl http://127.0.0.1:8000/api/desk/missions/<mission_id>/
+curl http://127.0.0.1:8000/api/opc/missions/<mission_id>/
 ```
 
 Returns mission status, result, events, quality gates, and token usage.
@@ -248,7 +248,7 @@ Each message is a `MissionEvent` JSON object:
 ### Cost
 
 ```bash
-curl http://127.0.0.1:8000/api/desk/openclaw/cost/?days=30
+curl http://127.0.0.1:8000/api/opc/openclaw/cost/?days=30
 ```
 
 OpenClaw Gateway `usage-cost` may be degraded when the local Gateway pairing scope rejects management RPCs. Mission-level token usage is still captured from `openclaw agent --json` via `agentMeta.usage`.

@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from "vue";
 import { createCommand, fetchBriefing, fetchMission, missionLogUrl, type DeskBriefing, type Mission, type MissionEvent } from "./lib/api";
 
 const briefing = ref<DeskBriefing | null>(null);
-const command = ref("Evaluate the CEO Desk MVP delivery plan and return this week's action list.");
+const command = ref("Evaluate the OPC MVP delivery plan and return this week's action list.");
 const mission = ref<Mission | null>(null);
 const liveEvents = ref<MissionEvent[]>([]);
 const loading = ref(true);
@@ -20,7 +20,7 @@ async function loadBriefing() {
     loading.value = true;
     briefing.value = await fetchBriefing();
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : "CEO Desk is temporarily unreachable.";
+    error.value = caught instanceof Error ? caught.message : "OPC is temporarily unreachable.";
   } finally {
     loading.value = false;
   }
@@ -78,11 +78,11 @@ onMounted(loadBriefing);
     <section class="workspace-grid min-h-screen px-5 py-5 sm:px-8 lg:px-10">
       <aside class="command-rail">
         <p class="eyebrow">OpenClaw Executive OS</p>
-        <h1>CEO Desk</h1>
-        <p class="lede">Give one executive command to an AI leadership team. COO decomposes, CTO/CFO/CMO work in parallel, and CEO returns the board brief.</p>
+        <h1>OPC</h1>
+        <p class="lede">Give one founder command to an AI leadership team. COO decomposes, CTO/CFO/CMO work in parallel, and CEO returns the board brief.</p>
 
         <form class="command-box" @submit.prevent="submitCommand">
-          <label for="command">CEO Command</label>
+          <label for="command">Founder Command</label>
           <textarea id="command" v-model="command" rows="7" />
           <button type="submit" :disabled="submitting">
             {{ submitting ? "Dispatching..." : "Assign to Executive Team" }}
@@ -102,7 +102,7 @@ onMounted(loadBriefing);
       </aside>
 
       <section class="board">
-        <div v-if="loading" class="notice">Connecting to CEO Desk API...</div>
+        <div v-if="loading" class="notice">Connecting to OPC API...</div>
         <div v-else-if="error" class="notice error">{{ error }}</div>
 
         <template v-else-if="briefing">
@@ -130,7 +130,7 @@ onMounted(loadBriefing);
             </article>
           </section>
 
-          <section class="metrics" aria-label="CEO Desk metrics">
+          <section class="metrics" aria-label="OPC metrics">
             <article>
               <span>{{ briefing.metrics.agentsReady }}</span>
               <p>Agents Ready</p>
@@ -191,7 +191,7 @@ onMounted(loadBriefing);
               <h2>{{ mission.status }}</h2>
               <p v-if="mission.resultText" class="result-text">{{ mission.resultText }}</p>
               <p v-else-if="mission.error" class="result-text error-text">{{ mission.error }}</p>
-              <p v-else class="result-text">OpenClaw is processing this CEO Command.</p>
+              <p v-else class="result-text">OpenClaw is processing this Founder Command.</p>
             </div>
             <div class="usage-grid">
               <span>{{ mission.usage.input }}</span>

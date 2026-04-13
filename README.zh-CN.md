@@ -1,8 +1,8 @@
-# CEO Desk
+# OPC
 
 语言：[English](README.md) | 中文
 
-CEO Desk 是一个只面向 OpenClaw 的多 Agent 编排管理桌面。它把用户的一句战略指令交给一组预设的 AI 高管角色，由 CEO、COO、CTO、CFO、CMO、SRE 协同拆解、执行、质检和汇报。
+OPC（One Person Company）是一个只面向 OpenClaw 的多 Agent 编排管理桌面。它把用户的一句创始人指令交给一组预设的 AI 高管角色，由 CEO、COO、CTO、CFO、CMO、SRE 协同拆解、执行、质检和汇报。
 
 当前仓库是 MVP 开发骨架，技术栈参考本机 `wanny` 项目：
 
@@ -34,7 +34,7 @@ uv run python manage.py runserver 0.0.0.0:8000
 
 ```bash
 curl http://127.0.0.1:8000/api/health/
-curl http://127.0.0.1:8000/api/desk/briefing/
+curl http://127.0.0.1:8000/api/opc/briefing/
 ```
 
 ### 2. 前端
@@ -80,7 +80,7 @@ python3 scripts/bootstrap_openclaw.py
 
 ## MVP 范围
 
-- CEO Command: 输入单一战略指令
+- Founder Command: 输入单一战略指令
 - Executive Team: CEO/COO/CTO/CFO/CMO/SRE 角色模板
 - Mission Pipeline: Intake、Decomposition、Parallel Work、Quality Gate、Board Brief
 - Cost/Risk Placeholder: 预算、质量门、运行时配置占位
@@ -91,10 +91,10 @@ python3 scripts/bootstrap_openclaw.py
 
 ```text
 backend/
-  ceo_desk_server/     Django project
-  apps/desk/           CEO Desk API app
+  opc_server/     Django project
+  apps/desk/           OPC API app
 frontend/
-  src/App.vue          CEO Desk workspace
+  src/App.vue          OPC workspace
   src/lib/api.ts       API client
 docker/                Container build and nginx config
 docs/                  Product and architecture docs

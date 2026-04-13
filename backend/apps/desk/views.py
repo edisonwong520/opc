@@ -84,8 +84,8 @@ def briefing(_request):
     models = model_status()
     return JsonResponse(
         {
-            "product": "CEO Desk",
-            "positioning": "The CEO operating desk built exclusively for the OpenClaw ecosystem",
+            "product": "OPC",
+            "positioning": "The One Person Company operating desk built exclusively for the OpenClaw ecosystem",
             "gateway": settings.OPENCLAW_GATEWAY_URL,
             "integration": "OpenClaw Gateway",
             "authMode": settings.OPENCLAW_GATEWAY_AUTH_MODE,
@@ -117,7 +117,7 @@ def create_command(request):
     if not command:
         return JsonResponse({"error": "`command` is required."}, status=400)
 
-    session_id = str(payload.get("sessionId") or f"ceo-desk-{uuid.uuid4().hex[:10]}")
+    session_id = str(payload.get("sessionId") or f"opc-{uuid.uuid4().hex[:10]}")
     mission = Mission.objects.create(
         command=command,
         session_id=session_id,

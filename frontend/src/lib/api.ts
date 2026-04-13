@@ -87,15 +87,15 @@ export interface Mission {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export async function fetchBriefing(): Promise<DeskBriefing> {
-  const response = await fetch(`${API_BASE_URL}/api/desk/briefing/`);
+  const response = await fetch(`${API_BASE_URL}/api/opc/briefing/`);
   if (!response.ok) {
-    throw new Error("Unable to load CEO Desk briefing.");
+    throw new Error("Unable to load OPC briefing.");
   }
   return response.json();
 }
 
 export async function createCommand(command: string): Promise<Mission> {
-  const response = await fetch(`${API_BASE_URL}/api/desk/commands/`, {
+  const response = await fetch(`${API_BASE_URL}/api/opc/commands/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ command }),
@@ -107,7 +107,7 @@ export async function createCommand(command: string): Promise<Mission> {
 }
 
 export async function fetchMission(id: string): Promise<Mission> {
-  const response = await fetch(`${API_BASE_URL}/api/desk/missions/${id}/`);
+  const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/`);
   if (!response.ok) {
     throw new Error("Unable to load mission.");
   }

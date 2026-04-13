@@ -4,11 +4,11 @@ from django.urls import include, path
 
 
 def health(_request):
-    return JsonResponse({"status": "ok", "service": "ceo-desk-api"})
+    return JsonResponse({"status": "ok", "service": "opc-api"})
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health, name="health"),
-    path("api/desk/", include("apps.desk.urls")),
+    path("api/opc/", include("apps.desk.urls")),
 ]

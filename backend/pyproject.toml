@@ -1,7 +1,7 @@
 [project]
-name = "ceo-desk-backend"
+name = "opc-backend"
 version = "0.1.0"
-description = "CEO Desk API for OpenClaw multi-agent orchestration."
+description = "OPC API for OpenClaw multi-agent orchestration."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,5 +19,5 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "ceo_desk_server.settings"
+DJANGO_SETTINGS_MODULE = "opc_server.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]

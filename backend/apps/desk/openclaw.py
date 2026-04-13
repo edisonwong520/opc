@@ -188,7 +188,7 @@ def _run_mission(mission_id: str) -> None:
     mission.status = Mission.Status.RUNNING
     mission.started_at = timezone.now()
     mission.save(update_fields=["status", "started_at"])
-    create_event(mission, "Mission accepted by CEO Desk.", event_type="status")
+    create_event(mission, "Mission accepted by OPC.", event_type="status")
 
     status = gateway_status()
     if status["ok"]:

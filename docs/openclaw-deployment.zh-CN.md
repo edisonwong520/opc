@@ -2,9 +2,9 @@
 
 语言：[English](openclaw-deployment.md) | 中文
 
-CEO Desk 只支持 OpenClaw，不支持 NanoClaw 或其他 agent runtime。
+OPC 只支持 OpenClaw，不支持其他 agent runtime。
 
-本文记录 CEO Desk 的本机 OpenClaw 部署基线。
+本文记录 OPC 的本机 OpenClaw 部署基线。
 
 ## 当前部署
 
@@ -75,7 +75,7 @@ openclaw onboard \
 - `--auth-choice skip` 只部署 Gateway，不在 onboard 阶段配置模型 provider。
 - `--gateway-bind loopback` 只允许本机访问。
 - `--gateway-auth token` 会保护 Gateway。token 只保存在本机 OpenClaw 配置中，不提交。
-- `--skip-channels` 跳过 Telegram、Discord、WhatsApp 等 channel。CEO Desk 当前只需要 Gateway。
+- `--skip-channels` 跳过 Telegram、Discord、WhatsApp 等 channel。OPC 当前只需要 Gateway。
 
 ## 验证
 
@@ -94,7 +94,7 @@ openclaw doctor
 当前非阻断提醒：
 
 - Gateway service 使用 nvm 下的 Node。未来升级 Node 后，可能需要重新安装 Gateway service。
-- bundled Discord voice dependency 未安装。当前未启用 Discord channel，不影响 CEO Desk。
+- bundled Discord voice dependency 未安装。当前未启用 Discord channel，不影响 OPC。
 
 ## 服务命令
 
@@ -106,7 +106,7 @@ openclaw gateway start
 openclaw logs
 ```
 
-## CEO Desk 配置
+## OPC 配置
 
 后端通过 `OPENCLAW_GATEWAY_URL` 指向 OpenClaw Gateway：
 
@@ -156,23 +156,23 @@ python3 scripts/bootstrap_openclaw.py
 - 如果本机存在 `wanny/backend/.env` 且项目 `.env` 缺少 `AI_*`，会自动补齐缺失的模型配置。
 - 将 Gateway token 同步到 `.env` 和 `backend/.env`。
 - 将 `AI_*` 写入本机 OpenClaw 配置，供 launchd Gateway service 使用。
-- 设置 OpenClaw 默认模型为 `ceodesk/<AI_MODEL>`。
+- 设置 OpenClaw 默认模型为 `opc/<AI_MODEL>`。
 
 验证模型：
 
 ```bash
 openclaw models status --json
-openclaw models list --provider ceodesk
+openclaw models list --provider opc
 ```
 
 不要把 `.env`、`backend/.env` 或 `~/.openclaw` 中的密钥复制进文档、issue 或 commit。
 
-## CEO Desk OpenClaw 对接
+## OPC OpenClaw 对接
 
 已实现：
 
-1. Gateway health probe: `GET /api/desk/openclaw/health/`
+1. Gateway health probe: `GET /api/opc/openclaw/health/`
 2. Token handling: 本机 `.env` 和 `backend/.env`，均被 Git 忽略
-3. Mission adapter: `POST /api/desk/commands/` 创建 Mission 并调用 `openclaw agent`
+3. Mission adapter: `POST /api/opc/commands/` 创建 Mission 并调用 `openclaw agent`
 4. Streaming logs: `ws://<host>/ws/missions/<mission_id>/logs/`
 5. Cost and quality gates: Mission 记录 token usage 和 gateway/model/result/cost gates

@@ -13,7 +13,8 @@ ROOT_ENV = ROOT / ".env"
 BACKEND_ENV = ROOT / "backend" / ".env"
 OPENCLAW_CONFIG = Path.home() / ".openclaw" / "openclaw.json"
 OPENCLAW_WORKSPACE = Path.home() / ".openclaw" / "workspace"
-OPENCLAW_PROVIDER_ID = "ceodesk"
+OPENCLAW_PROVIDER_ID = "opc"
+LEGACY_PROVIDER_ID = "ceo" + "desk"
 
 
 def run(args: list[str], env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess:
@@ -182,6 +183,8 @@ def configure_model(values: dict[str, str]) -> None:
     finally:
         batch_path.unlink(missing_ok=True)
 
+    run(["openclaw", "config", "unset", f"models.providers.{LEGACY_PROVIDER_ID}"], check=False)
+    run(["openclaw", "config", "unset", f"agents.defaults.models.{LEGACY_PROVIDER_ID}/{model}"], check=False)
     run(["openclaw", "models", "set", f"{OPENCLAW_PROVIDER_ID}/{model}"])
 
 
@@ -213,7 +216,7 @@ def main() -> None:
     wait_for_gateway()
     run(["openclaw", "gateway", "status"], check=False)
     run(["openclaw", "models", "status", "--json"], check=False)
-    print("OpenClaw is ready for CEO Desk.")
+    print("OpenClaw is ready for OPC.")
 
 
 if __name__ == "__main__":
