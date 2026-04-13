@@ -11,7 +11,7 @@ CEO Desk 的核心定位是“CEO 视角的 Agent 公司驾驶舱”，不是传
 | Layer | Choice | Reason |
 | --- | --- | --- |
 | Frontend | Vue 3 + Vite + Tailwind | 与 `wanny` 保持一致，启动快，适合快速迭代控制台 |
-| Backend | Django 6 + uv | Python 生态友好，便于后续接 OpenClaw/NanoClaw、队列和模型 SDK |
+| Backend | Django 6 + uv | Python 生态友好，便于后续接 OpenClaw、队列和模型 SDK |
 | Local DB | SQLite | MVP 阶段零依赖启动 |
 | Runtime | Daphne-ready ASGI | 保留后续 WebSocket/streaming 任务日志空间 |
 | Deploy | Docker Compose | 与 `wanny` 的部署习惯一致 |
@@ -30,7 +30,7 @@ CEO Desk 的核心定位是“CEO 视角的 Agent 公司驾驶舱”，不是传
 
 - 产品定位
 - OpenClaw Gateway URL
-- NanoClaw runtime 配置
+- OpenClaw Gateway 配置
 - 预设高管团队
 - 执行流水线
 - MVP 指标
@@ -57,12 +57,11 @@ CEO Desk 的核心定位是“CEO 视角的 Agent 公司驾驶舱”，不是传
 - `QualityGate`: 检查类型、审批状态、阻断原因
 - `BoardBrief`: 最终汇总报告、来源引用、决策建议
 
-## OpenClaw/NanoClaw Integration Path
+## OpenClaw Integration Path
 
-MVP 先通过环境变量保留集成边界：
+MVP 先通过环境变量保留 OpenClaw 集成边界：
 
 - `OPENCLAW_GATEWAY_URL`
-- `NANOCLAW_BIN`
 
 推荐按三个阶段接入：
 

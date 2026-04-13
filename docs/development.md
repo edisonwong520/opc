@@ -43,7 +43,6 @@ Important variables:
 - `DJANGO_ALLOWED_HOSTS`: comma-separated host allowlist
 - `DJANGO_CORS_ALLOWED_ORIGINS`: frontend dev origins
 - `OPENCLAW_GATEWAY_URL`: OpenClaw gateway endpoint
-- `NANOCLAW_BIN`: NanoClaw executable name or path
 
 Frontend environment:
 

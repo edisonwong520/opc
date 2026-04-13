@@ -1,7 +1,7 @@
 [project]
 name = "ceo-desk-backend"
 version = "0.1.0"
-description = "CEO Desk API for OpenClaw/NanoClaw multi-agent orchestration."
+description = "CEO Desk API for OpenClaw multi-agent orchestration."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

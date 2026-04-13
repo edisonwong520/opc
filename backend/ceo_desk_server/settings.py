@@ -99,4 +99,3 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 OPENCLAW_GATEWAY_URL = os.getenv("OPENCLAW_GATEWAY_URL", "http://localhost:7788")
-NANOCLAW_BIN = os.getenv("NANOCLAW_BIN", "nanoclaw")

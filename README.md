@@ -1,6 +1,6 @@
 # CEO Desk
 
-CEO Desk 是一个面向 OpenClaw/NanoClaw 的多 Agent 编排管理桌面。它把用户的一句战略指令交给一组预设的 AI 高管角色，由 CEO/COO/CTO/CFO/CMO/SRE 共同拆解、执行、质检和汇报。
+CEO Desk 是一个面向 OpenClaw 的多 Agent 编排管理桌面。它把用户的一句战略指令交给一组预设的 AI 高管角色，由 CEO/COO/CTO/CFO/CMO/SRE 共同拆解、执行、质检和汇报。
 
 当前仓库是 MVP 开发骨架，技术栈参考 `wanny`：
 
@@ -68,7 +68,7 @@ docker compose up --build
 - Executive Team: CEO/COO/CTO/CFO/CMO/SRE 角色模板
 - Mission Pipeline: Intake、Decomposition、Parallel Work、Quality Gate、Board Brief
 - Cost/Risk Placeholder: 预算、质量门、运行时配置占位
-- OpenClaw Gateway Placeholder: 后续接入实际 OpenClaw/NanoClaw runtime
+- OpenClaw Gateway Placeholder: 后续接入实际 OpenClaw runtime
 
 ## 项目结构
 
@@ -87,6 +87,6 @@ scripts/dev.sh         Local dev runner
 ## 下一步
 
 1. 把 `apps.desk.views` 中的静态角色模板迁移到数据库模型。
-2. 增加 Agent Template 编辑能力，生成 OpenClaw/NanoClaw 可消费的角色配置。
+2. 增加 Agent Template 编辑能力，生成 OpenClaw 可消费的角色配置。
 3. 接入 OpenClaw Gateway，启动真实 agent session。
 4. 加入任务状态持久化、执行日志、token 成本统计和质量门审批。

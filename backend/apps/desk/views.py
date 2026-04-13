@@ -71,9 +71,9 @@ def briefing(_request):
     return JsonResponse(
         {
             "product": "CEO Desk",
-            "positioning": "OpenClaw/NanoClaw 生态专属的 CEO 管理桌面",
+            "positioning": "OpenClaw 生态专属的 CEO 管理桌面",
             "gateway": settings.OPENCLAW_GATEWAY_URL,
-            "runtime": settings.NANOCLAW_BIN,
+            "integration": "OpenClaw Gateway",
             "team": EXECUTIVE_TEAM,
             "pipeline": TASK_PIPELINE,
             "metrics": {

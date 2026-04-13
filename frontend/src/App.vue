@@ -80,7 +80,7 @@ onMounted(loadBriefing);
               <h2>{{ briefing.positioning }}</h2>
             </div>
             <div class="runtime">
-              <span>{{ briefing.runtime }}</span>
+              <span>{{ briefing.integration }}</span>
               <small>{{ briefing.gateway }}</small>
             </div>
           </header>
