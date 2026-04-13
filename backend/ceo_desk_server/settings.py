@@ -16,6 +16,7 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     "daphne",
+    "channels",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -56,6 +57,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "ceo_desk_server.wsgi.application"
 ASGI_APPLICATION = "ceo_desk_server.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
 
 DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
 if DB_ENGINE == "django.db.backends.sqlite3":
@@ -102,3 +109,8 @@ OPENCLAW_GATEWAY_URL = os.getenv("OPENCLAW_GATEWAY_URL", "ws://127.0.0.1:7788")
 OPENCLAW_GATEWAY_AUTH_MODE = os.getenv("OPENCLAW_GATEWAY_AUTH_MODE", "token")
 OPENCLAW_GATEWAY_TOKEN = os.getenv("OPENCLAW_GATEWAY_TOKEN", "")
 OPENCLAW_GATEWAY_PASSWORD = os.getenv("OPENCLAW_GATEWAY_PASSWORD", "")
+AI_BASE_URL = os.getenv("AI_BASE_URL", "")
+AI_API_KEY = os.getenv("AI_API_KEY", "")
+AI_MODEL = os.getenv("AI_MODEL", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "")

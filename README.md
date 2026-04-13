@@ -83,6 +83,7 @@ python3 scripts/bootstrap_openclaw.py
 - Mission Pipeline: Intake、Decomposition、Parallel Work、Quality Gate、Board Brief
 - Cost/Risk Placeholder: 预算、质量门、运行时配置占位
 - OpenClaw Gateway Placeholder: 后续接入实际 OpenClaw runtime
+- OpenClaw Mission Adapter: 后端可创建 Mission、调用 OpenClaw agent、通过 WebSocket 推送日志并记录 token usage
 
 ## 项目结构
 

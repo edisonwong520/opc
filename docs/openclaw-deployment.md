@@ -181,11 +181,79 @@ openclaw models list --provider ceodesk
 
 建议后续对接顺序：
 
-1. Gateway health probe: 后端检查 OpenClaw Gateway 是否在线。
-2. Token handling: 将 Gateway token 放入本机 `.env` 或系统 secret，不提交到 Git。
-3. Mission adapter: 把 CEO Command 转为 OpenClaw agent/session 请求。
-4. Streaming logs: 用 ASGI/WebSocket 把 OpenClaw 执行日志推到前端。
-5. Cost and quality gates: 写入任务执行记录、成本统计和质量门结果。
+1. Gateway health probe: 已实现，见 `GET /api/desk/openclaw/health/`。
+2. Token handling: 已实现，`.env` 和 `backend/.env` 保存本机 token，Git 忽略真实密钥。
+3. Mission adapter: 已实现，`POST /api/desk/commands/` 会创建 Mission 并调用 `openclaw agent`。
+4. Streaming logs: 已实现，`ws://<host>/ws/missions/<mission_id>/logs/` 推送 MissionEvent。
+5. Cost and quality gates: 已实现基础版，Mission 持久化 token usage，并写入 gateway/model/result/cost 质量门。
+
+## CEO Desk OpenClaw API
+
+### Health
+
+```bash
+curl http://127.0.0.1:8000/api/desk/openclaw/health/
+```
+
+返回：
+
+- Gateway service 是否 running
+- RPC probe 是否 OK
+- 是否存在 pairing 限制
+- 当前默认模型 provider 是否可用
+
+### Create Mission
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/desk/commands/ \
+  -H 'Content-Type: application/json' \
+  -d '{"command":"Reply exactly: integration-ok"}'
+```
+
+后端会：
+
+1. 创建 `Mission`
+2. 初始化质量门
+3. 后台调用 `openclaw agent --session-id <id> --message <command> --json`
+4. 流式写入 `MissionEvent`
+5. 捕获 OpenClaw final response 和 token usage
+
+### Mission Detail
+
+```bash
+curl http://127.0.0.1:8000/api/desk/missions/<mission_id>/
+```
+
+返回 mission 状态、result、events、quality gates 和 token usage。
+
+### Streaming Logs
+
+前端连接：
+
+```text
+ws://127.0.0.1:8000/ws/missions/<mission_id>/logs/
+```
+
+每条消息是一个 `MissionEvent` JSON：
+
+```json
+{
+  "id": 1,
+  "type": "status",
+  "level": "info",
+  "message": "Mission succeeded.",
+  "payload": {},
+  "createdAt": "2026-04-13T17:40:00"
+}
+```
+
+### Cost
+
+```bash
+curl http://127.0.0.1:8000/api/desk/openclaw/cost/?days=30
+```
+
+OpenClaw Gateway 的 `usage-cost` RPC 在当前本机配置下可能因 pairing scope 返回 degraded；Mission 自身仍会从 `openclaw agent --json` 的 `agentMeta.usage` 捕获 input/output/total tokens。
 
 ## Reinstall Or Repair
 

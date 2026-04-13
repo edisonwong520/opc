@@ -207,6 +207,38 @@ h1 {
   margin-bottom: 22px;
 }
 
+.openclaw-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.openclaw-strip article {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.openclaw-strip article.good {
+  background: #dcebd8;
+}
+
+.openclaw-strip article.warn {
+  background: #f3d77b;
+}
+
+.openclaw-strip span,
+.openclaw-strip strong {
+  display: block;
+}
+
+.openclaw-strip strong {
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+
 .metrics article,
 .agent-card,
 .step {
@@ -290,6 +322,74 @@ h1 {
   margin-top: 30px;
 }
 
+.mission-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.5fr);
+  gap: 16px;
+  margin-top: 30px;
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #171717;
+  color: #f6f8f7;
+  padding: 18px;
+}
+
+.mission-console h2 {
+  font-family: "Instrument Serif", serif;
+  font-size: 2.4rem;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+
+.result-text {
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.error-text {
+  color: #f2a58e;
+}
+
+.usage-grid {
+  align-self: start;
+  border: 1px solid #4a504d;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.usage-grid span {
+  font-family: "Instrument Serif", serif;
+  font-size: 2rem;
+}
+
+.log-stream {
+  grid-column: 1 / -1;
+  max-height: 260px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.log-stream article {
+  border-top: 1px solid #343b38;
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.log-stream span {
+  color: #7ec4a6;
+  font-weight: 700;
+}
+
+.log-stream p {
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+}
+
 .pipeline h2 {
   font-size: 1.1rem;
 }
@@ -323,8 +423,10 @@ h1 {
 @media (max-width: 1080px) {
   .workspace-grid,
   .metrics,
+  .openclaw-strip,
   .agent-row,
-  .pipeline-track {
+  .pipeline-track,
+  .mission-console {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -340,8 +442,10 @@ h1 {
 @media (max-width: 720px) {
   .workspace-grid,
   .metrics,
+  .openclaw-strip,
   .agent-row,
-  .pipeline-track {
+  .pipeline-track,
+  .mission-console {
     grid-template-columns: 1fr;
   }
 

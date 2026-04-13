@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
-import { createCommand, fetchBriefing, type CommandPlan, type DeskBriefing } from "./lib/api";
+import { createCommand, fetchBriefing, fetchMission, missionLogUrl, type DeskBriefing, type Mission, type MissionEvent } from "./lib/api";
 
 const briefing = ref<DeskBriefing | null>(null);
 const command = ref("帮我评估 CEO Desk 的 MVP 交付计划，并给出本周行动清单。");
-const commandPlan = ref<CommandPlan | null>(null);
+const mission = ref<Mission | null>(null);
+const liveEvents = ref<MissionEvent[]>([]);
 const loading = ref(true);
 const submitting = ref(false);
 const error = ref("");
+const socket = ref<WebSocket | null>(null);
 
 const topAgent = computed(() => briefing.value?.team.find((agent) => agent.id === "ceo"));
 const directReports = computed(() => briefing.value?.team.filter((agent) => agent.reportsTo === "coo") ?? []);
@@ -30,11 +32,41 @@ async function submitCommand() {
   }
   try {
     submitting.value = true;
-    commandPlan.value = await createCommand(command.value.trim());
+    mission.value = await createCommand(command.value.trim());
+    liveEvents.value = mission.value.events ?? [];
+    connectMissionSocket(mission.value.id);
+    void pollMission(mission.value.id);
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : "指令规划失败。";
   } finally {
     submitting.value = false;
+  }
+}
+
+function connectMissionSocket(id: string) {
+  socket.value?.close();
+  socket.value = new WebSocket(missionLogUrl(id));
+  socket.value.onmessage = (event) => {
+    const parsed = JSON.parse(event.data) as MissionEvent;
+    liveEvents.value = [...liveEvents.value, parsed].slice(-80);
+    if (parsed.type === "status" && parsed.payload && "status" in parsed.payload) {
+      void fetchMission(id).then((fresh) => {
+        mission.value = fresh;
+        liveEvents.value = fresh.events ?? liveEvents.value;
+      });
+    }
+  };
+}
+
+async function pollMission(id: string) {
+  for (let i = 0; i < 180; i += 1) {
+    const fresh = await fetchMission(id);
+    mission.value = fresh;
+    liveEvents.value = fresh.events ?? liveEvents.value;
+    if (!["queued", "running"].includes(fresh.status)) {
+      return;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 2000));
   }
 }
 
@@ -57,13 +89,13 @@ onMounted(loadBriefing);
           </button>
         </form>
 
-        <div v-if="commandPlan" class="dispatch">
-          <p class="dispatch-title">{{ commandPlan.status }}</p>
-          <p>{{ commandPlan.nextStep }}</p>
+        <div v-if="mission" class="dispatch">
+          <p class="dispatch-title">{{ mission.status }}</p>
+          <p>Session {{ mission.sessionId }}</p>
           <ul>
-            <li v-for="workstream in commandPlan.workstreams" :key="workstream.agent">
-              <strong>{{ workstream.agent }}</strong>
-              <span>{{ workstream.task }}</span>
+            <li v-for="gate in mission.qualityGates" :key="gate.id">
+              <strong>{{ gate.name }}</strong>
+              <span>{{ gate.status }}</span>
             </li>
           </ul>
         </div>
@@ -84,6 +116,19 @@ onMounted(loadBriefing);
               <small>{{ briefing.gateway }} · {{ briefing.authMode }}</small>
             </div>
           </header>
+
+          <section class="openclaw-strip">
+            <article :class="{ good: briefing.openclaw.health.ok, warn: !briefing.openclaw.health.rpcOk }">
+              <span>Gateway</span>
+              <strong>{{ briefing.openclaw.health.ok ? "running" : "degraded" }}</strong>
+              <p>{{ briefing.openclaw.health.rpcOk ? "RPC probe ok" : "CLI available, RPC pairing may be required" }}</p>
+            </article>
+            <article :class="{ good: briefing.openclaw.model.ok }">
+              <span>Model</span>
+              <strong>{{ briefing.openclaw.model.resolvedDefault || "not configured" }}</strong>
+              <p>{{ briefing.openclaw.model.missingProvidersInUse.length ? "provider missing" : "provider ready" }}</p>
+            </article>
+          </section>
 
           <section class="metrics" aria-label="CEO Desk metrics">
             <article>
@@ -136,6 +181,28 @@ onMounted(loadBriefing);
                 <span>{{ step.state }}</span>
                 <h3>{{ step.label }}</h3>
                 <p>{{ step.owner }}</p>
+              </article>
+            </div>
+          </section>
+
+          <section v-if="mission" class="mission-console">
+            <div>
+              <p class="eyebrow">OpenClaw Mission</p>
+              <h2>{{ mission.status }}</h2>
+              <p v-if="mission.resultText" class="result-text">{{ mission.resultText }}</p>
+              <p v-else-if="mission.error" class="result-text error-text">{{ mission.error }}</p>
+              <p v-else class="result-text">OpenClaw 正在处理这条 CEO Command。</p>
+            </div>
+            <div class="usage-grid">
+              <span>{{ mission.usage.input }}</span>
+              <span>{{ mission.usage.output }}</span>
+              <span>{{ mission.usage.total }}</span>
+              <small>input / output / total tokens</small>
+            </div>
+            <div class="log-stream">
+              <article v-for="event in liveEvents" :key="event.id">
+                <span>{{ event.level }}</span>
+                <p>{{ event.message }}</p>
               </article>
             </div>
           </section>

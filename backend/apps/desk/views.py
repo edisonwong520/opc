@@ -1,9 +1,21 @@
 import json
+import uuid
 
 from django.conf import settings
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
+
+from .models import Mission
+from .openclaw import (
+    gateway_logs,
+    gateway_status,
+    model_status,
+    serialize_mission,
+    start_mission,
+    usage_cost,
+)
 
 
 EXECUTIVE_TEAM = [
@@ -68,6 +80,8 @@ TASK_PIPELINE = [
 
 @require_GET
 def briefing(_request):
+    health = gateway_status()
+    models = model_status()
     return JsonResponse(
         {
             "product": "CEO Desk",
@@ -75,11 +89,15 @@ def briefing(_request):
             "gateway": settings.OPENCLAW_GATEWAY_URL,
             "integration": "OpenClaw Gateway",
             "authMode": settings.OPENCLAW_GATEWAY_AUTH_MODE,
+            "openclaw": {
+                "health": health,
+                "model": models,
+            },
             "team": EXECUTIVE_TEAM,
             "pipeline": TASK_PIPELINE,
             "metrics": {
                 "agentsReady": 5,
-                "activeMissions": 1,
+                "activeMissions": Mission.objects.filter(status__in=[Mission.Status.QUEUED, Mission.Status.RUNNING]).count(),
                 "budgetUsedUsd": 0.0,
                 "qualityGates": 5,
             },
@@ -99,18 +117,40 @@ def create_command(request):
     if not command:
         return JsonResponse({"error": "`command` is required."}, status=400)
 
-    return JsonResponse(
-        {
-            "id": "cmd-preview-001",
-            "command": command,
-            "status": "planned",
-            "nextStep": "COO will split this command into executive workstreams.",
-            "workstreams": [
-                {"agent": "COO", "task": "拆解目标、定义验收标准和汇报格式。"},
-                {"agent": "CTO", "task": "判断技术路径、依赖和工程风险。"},
-                {"agent": "CFO", "task": "估算预算、token 成本和资源上限。"},
-                {"agent": "CMO", "task": "补充市场定位、竞品和用户侧判断。"},
-            ],
-        },
-        status=201,
+    session_id = str(payload.get("sessionId") or f"ceo-desk-{uuid.uuid4().hex[:10]}")
+    mission = Mission.objects.create(
+        command=command,
+        session_id=session_id,
+        agent_id=str(payload.get("agentId", "")),
     )
+    start_mission(mission)
+    return JsonResponse(serialize_mission(mission, include_events=True), status=201)
+
+
+@require_GET
+def list_missions(_request):
+    missions = Mission.objects.prefetch_related("quality_gates")[:20]
+    return JsonResponse({"missions": [serialize_mission(mission) for mission in missions]})
+
+
+@require_http_methods(["GET"])
+def mission_detail(_request, mission_id):
+    mission = get_object_or_404(Mission.objects.prefetch_related("events", "quality_gates"), id=mission_id)
+    return JsonResponse(serialize_mission(mission, include_events=True))
+
+
+@require_GET
+def openclaw_health(_request):
+    return JsonResponse({"gateway": gateway_status(), "model": model_status()})
+
+
+@require_GET
+def openclaw_logs(request):
+    limit = int(request.GET.get("limit", "100"))
+    return JsonResponse({"logs": gateway_logs(limit=min(max(limit, 1), 500))})
+
+
+@require_GET
+def openclaw_cost(request):
+    days = int(request.GET.get("days", "30"))
+    return JsonResponse(usage_cost(days=min(max(days, 1), 90)))
