@@ -5,6 +5,9 @@ export interface ExecutiveAgent {
   mission: string;
   reportsTo: string | null;
   status: "ready" | "standby" | string;
+  tools: string[];
+  modelPreference: string;
+  budgetLimitUsd: string;
 }
 
 export interface PipelineStep {
@@ -78,6 +81,25 @@ export interface Mission {
     estimatedCostUsd: string;
   };
   qualityGates: QualityGate[];
+  workstreams: Array<{
+    id: number;
+    owner: string;
+    title: string;
+    description: string;
+    status: string;
+    result: string;
+    agentTemplateId: string | null;
+    updatedAt: string;
+  }>;
+  boardBrief: {
+    id: number;
+    title: string;
+    summary: string;
+    recommendations: string[];
+    risks: string[];
+    sources: Array<Record<string, unknown>>;
+    updatedAt: string;
+  } | null;
   events?: MissionEvent[];
   createdAt: string;
   startedAt: string | null;
@@ -121,4 +143,83 @@ export function missionLogUrl(id: string): string {
   url.pathname = `/ws/missions/${id}/logs/`;
   url.search = "";
   return url.toString();
+}
+
+export async function fetchTemplates(): Promise<{ templates: ExecutiveAgent[] }> {
+  const response = await fetch(`${API_BASE_URL}/api/opc/templates/`);
+  if (!response.ok) {
+    throw new Error("Unable to load templates.");
+  }
+  return response.json();
+}
+
+export interface TemplateInput {
+  id: string;
+  name: string;
+  title?: string;
+  mission?: string;
+  reportsTo?: string;
+  status?: string;
+  tools?: string[];
+  modelPreference?: string;
+  budgetLimitUsd?: number;
+  sortOrder?: number;
+}
+
+export async function createTemplate(data: TemplateInput): Promise<ExecutiveAgent> {
+  const response = await fetch(`${API_BASE_URL}/api/opc/templates/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error("Unable to create template.");
+  }
+  return response.json();
+}
+
+export async function updateTemplate(id: string, data: Partial<TemplateInput>): Promise<ExecutiveAgent> {
+  const response = await fetch(`${API_BASE_URL}/api/opc/templates/${id}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error("Unable to update template.");
+  }
+  return response.json();
+}
+
+export async function deleteTemplate(id: string): Promise<{ deleted: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/opc/templates/${id}/`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Unable to delete template.");
+  }
+  return response.json();
+}
+
+export async function approveMission(id: string, notes?: string): Promise<Mission> {
+  const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/approve/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ notes }),
+  });
+  if (!response.ok) {
+    throw new Error("Unable to approve mission.");
+  }
+  return response.json();
+}
+
+export async function rejectMission(id: string, notes?: string): Promise<Mission> {
+  const response = await fetch(`${API_BASE_URL}/api/opc/missions/${id}/reject/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ notes }),
+  });
+  if (!response.ok) {
+    throw new Error("Unable to reject mission.");
+  }
+  return response.json();
 }

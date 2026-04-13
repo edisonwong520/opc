@@ -50,6 +50,8 @@ npm run build
 - `AI_BASE_URL`: OpenAI-compatible 模型 endpoint
 - `AI_API_KEY`: 模型 API key，不能提交
 - `AI_MODEL`: OpenClaw bootstrap 使用的默认模型 id
+- `OPC_COST_INPUT_PER_1K_USD`: 可选的 input token 估算费率
+- `OPC_COST_OUTPUT_PER_1K_USD`: 可选的 output token 估算费率
 
 前端环境变量：
 
@@ -60,6 +62,6 @@ npm run build
 ## 编码说明
 
 - Agent orchestration 必须封装在后端 service module 中，不要从 view 直接调用 runtime。
-- 模板应保持 data-driven。`apps.desk.views` 中的初始 team 只是 MVP seed。
-- 真实长任务接入前应先补持久化。
+- 模板应通过 `AgentTemplate` 保持 data-driven，不要在 views 中重新写死角色数据。
+- Mission 持久化应围绕 `Mission`、`Workstream`、`MissionEvent`、`QualityGate`、`BoardBrief`。
 - Cost tracking 和 quality gates 是一等产品能力，不是后补项。

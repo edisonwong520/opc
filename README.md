@@ -81,9 +81,11 @@ The script reuses an existing OpenClaw installation. If OpenClaw is missing, it 
 ## MVP Scope
 
 - Founder Command: enter one executive command
-- Executive Team: CEO/COO/CTO/CFO/CMO/SRE role template
+- Executive Team: database-backed CEO/COO/CTO/CFO/CMO/SRE role templates
 - Mission Pipeline: Intake, Decomposition, Parallel Work, Quality Gate, Board Brief
-- Cost/Risk Placeholder: budget, quality gates, and runtime configuration placeholders
+- Workstreams: persistent COO/CTO/CFO/CMO/SRE workstream records per mission
+- Board Brief: persistent executive summary, recommendations, risks, and sources
+- Cost/Risk: token usage, configurable cost estimate rates, quality gates, and founder approval state
 - OpenClaw Gateway: local Gateway configuration and health status
 - OpenClaw Mission Adapter: backend creates missions, calls OpenClaw agents, streams logs over WebSocket, and records token usage
 
@@ -103,7 +105,7 @@ scripts/dev.sh         Local dev runner
 
 ## Next Steps
 
-1. Move static executive role templates into database-backed models.
-2. Add an Agent Template editor that produces OpenClaw-compatible role configuration.
-3. Expand the Mission adapter from single-turn agent calls to multi-workstream orchestration.
-4. Add persistent workstreams, richer execution logs, token cost estimates, and approval gates.
+1. Add an Agent Template editor that produces OpenClaw-compatible role configuration.
+2. Expand the Mission adapter from one OpenClaw turn plus represented workstreams into independently delegated workstreams.
+3. Add founder approval actions in the UI so pending approval gates can be accepted or rejected.
+4. Add richer cost pricing profiles per model/provider.

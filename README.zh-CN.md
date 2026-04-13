@@ -81,9 +81,11 @@ python3 scripts/bootstrap_openclaw.py
 ## MVP 范围
 
 - Founder Command: 输入单一战略指令
-- Executive Team: CEO/COO/CTO/CFO/CMO/SRE 角色模板
+- Executive Team: 数据库持久化的 CEO/COO/CTO/CFO/CMO/SRE 角色模板
 - Mission Pipeline: Intake、Decomposition、Parallel Work、Quality Gate、Board Brief
-- Cost/Risk Placeholder: 预算、质量门、运行时配置占位
+- Workstreams: 每个 mission 持久化 COO/CTO/CFO/CMO/SRE workstream 记录
+- Board Brief: 持久化高管摘要、建议、风险和来源
+- Cost/Risk: token usage、可配置成本估算费率、质量门和 founder approval 状态
 - OpenClaw Gateway: 本机 Gateway 配置与健康状态
 - OpenClaw Mission Adapter: 后端创建 Mission、调用 OpenClaw agent、通过 WebSocket 推送日志并记录 token usage
 
@@ -103,7 +105,7 @@ scripts/dev.sh         Local dev runner
 
 ## 下一步
 
-1. 把静态高管角色模板迁移到数据库模型。
-2. 增加 Agent Template 编辑能力，生成 OpenClaw 可消费的角色配置。
-3. 将 Mission adapter 从单轮 agent 调用扩展为多工作流编排。
-4. 加入持久化 workstreams、更完整的执行日志、token 成本估算和审批质量门。
+1. 增加 Agent Template 编辑能力，生成 OpenClaw 可消费的角色配置。
+2. 将 Mission adapter 从“单次 OpenClaw 调用 + workstream 表示”扩展为真正独立委派的多 workstream。
+3. 在 UI 中增加 founder approval 操作，让 pending approval gates 可以被批准或拒绝。
+4. 为不同 model/provider 增加更细的成本定价配置。

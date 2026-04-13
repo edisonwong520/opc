@@ -82,14 +82,15 @@ ws://127.0.0.1:8000/ws/missions/<mission_id>/logs/
 
 - `Mission`: 用户指令、OpenClaw session id、状态、结果、raw output 和 token usage
 - `MissionEvent`: append-only mission log 和状态流
-- `QualityGate`: gateway health、model provider、agent result、cost capture 检查
+- `QualityGate`: gateway health、model provider、agent result、cost capture、founder approval 检查
+- `AgentTemplate`: 角色名称、职责、tools、模型偏好、预算上限
+- `Workstream`: 每个 mission 的子任务表示、owner agent、状态和结果
+- `BoardBrief`: 带建议、风险和来源的最终高管报告
 
 后续模型：
 
-- `AgentTemplate`: 角色名称、职责、tools、模型偏好、预算上限
-- `Workstream`: 子任务、owner agent、依赖、状态
 - `AgentRun`: runtime session、日志、token usage、成本、结果
-- `BoardBrief`: 带来源引用和建议的最终高管报告
+- `ApprovalDecision`: founder approval 操作、决策说明和 reviewer metadata
 
 ## OpenClaw 边界
 

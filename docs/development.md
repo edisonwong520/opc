@@ -50,6 +50,8 @@ Important variables:
 - `AI_BASE_URL`: OpenAI-compatible model endpoint
 - `AI_API_KEY`: model API key, never commit this value
 - `AI_MODEL`: default model id used by OpenClaw bootstrap
+- `OPC_COST_INPUT_PER_1K_USD`: optional input-token estimate rate
+- `OPC_COST_OUTPUT_PER_1K_USD`: optional output-token estimate rate
 
 Frontend environment:
 
@@ -60,6 +62,6 @@ During local Vite development, `/api` is proxied to `http://127.0.0.1:8000`.
 ## Coding Notes
 
 - Keep agent orchestration behind backend service modules rather than calling runtimes from views directly.
-- Keep templates data-driven. The initial hardcoded team in `apps.desk.views` is only an MVP seed.
-- Add persistence before wiring real long-running agent tasks.
+- Keep templates data-driven through `AgentTemplate`; do not reintroduce hardcoded role data in views.
+- Keep mission persistence centered on `Mission`, `Workstream`, `MissionEvent`, `QualityGate`, and `BoardBrief`.
 - Treat cost tracking and quality gates as first-class product surfaces, not afterthoughts.

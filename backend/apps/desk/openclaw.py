@@ -10,7 +10,7 @@ from channels.layers import get_channel_layer
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Mission, MissionEvent, QualityGate
+from .models import AgentTemplate, BoardBrief, Mission, MissionEvent, QualityGate, Workstream
 
 
 def _base_env() -> dict[str, str]:
@@ -140,7 +140,49 @@ def serialize_gate(gate: QualityGate) -> dict[str, Any]:
     }
 
 
+def serialize_agent_template(template: AgentTemplate) -> dict[str, Any]:
+    return {
+        "id": template.id,
+        "name": template.name,
+        "title": template.title,
+        "mission": template.mission,
+        "reportsTo": template.reports_to or None,
+        "status": template.status,
+        "tools": template.tools,
+        "modelPreference": template.model_preference,
+        "budgetLimitUsd": str(template.budget_limit_usd),
+    }
+
+
+def serialize_workstream(workstream: Workstream) -> dict[str, Any]:
+    return {
+        "id": workstream.id,
+        "owner": workstream.owner,
+        "title": workstream.title,
+        "description": workstream.description,
+        "status": workstream.status,
+        "result": workstream.result,
+        "agentTemplateId": workstream.agent_template_id,
+        "updatedAt": workstream.updated_at.isoformat(),
+    }
+
+
+def serialize_board_brief(brief: BoardBrief | None) -> dict[str, Any] | None:
+    if not brief:
+        return None
+    return {
+        "id": brief.id,
+        "title": brief.title,
+        "summary": brief.summary,
+        "recommendations": brief.recommendations,
+        "risks": brief.risks,
+        "sources": brief.sources,
+        "updatedAt": brief.updated_at.isoformat(),
+    }
+
+
 def serialize_mission(mission: Mission, *, include_events: bool = False) -> dict[str, Any]:
+    brief = getattr(mission, "board_brief", None)
     data = {
         "id": str(mission.id),
         "command": mission.command,
@@ -156,6 +198,8 @@ def serialize_mission(mission: Mission, *, include_events: bool = False) -> dict
             "estimatedCostUsd": str(mission.estimated_cost_usd),
         },
         "qualityGates": [serialize_gate(gate) for gate in mission.quality_gates.all()],
+        "workstreams": [serialize_workstream(workstream) for workstream in mission.workstreams.all()],
+        "boardBrief": serialize_board_brief(brief),
         "createdAt": mission.created_at.isoformat(),
         "startedAt": mission.started_at.isoformat() if mission.started_at else None,
         "finishedAt": mission.finished_at.isoformat() if mission.finished_at else None,
@@ -171,7 +215,7 @@ def start_mission(mission: Mission) -> None:
 
 
 def _ensure_quality_gates(mission: Mission) -> None:
-    for name in ["gateway-health", "model-provider", "agent-result", "cost-capture"]:
+    for name in ["gateway-health", "model-provider", "agent-result", "cost-capture", "founder-approval"]:
         QualityGate.objects.get_or_create(mission=mission, name=name)
 
 
@@ -182,13 +226,76 @@ def _set_gate(mission: Mission, name: str, status: str, details: str = "") -> No
     gate.save(update_fields=["status", "details", "updated_at"])
 
 
+def _ensure_workstreams(mission: Mission) -> None:
+    definitions = [
+        ("coo", "Mission decomposition", "Define workstreams, acceptance criteria, and reporting format."),
+        ("cto", "Technical review", "Assess technical path, implementation risk, and engineering quality."),
+        ("cfo", "Cost review", "Estimate token/API spend, budget risk, and return on effort."),
+        ("cmo", "Market review", "Assess positioning, user value, and go-to-market implications."),
+        ("sre", "Reliability review", "Check deployment, monitoring, rollback, and operational safety."),
+    ]
+    templates = {template.id: template for template in AgentTemplate.objects.filter(id__in=[item[0] for item in definitions])}
+    for index, (agent_id, title, description) in enumerate(definitions, start=1):
+        template = templates.get(agent_id)
+        Workstream.objects.get_or_create(
+            mission=mission,
+            owner=template.name if template else agent_id.upper(),
+            title=title,
+            defaults={
+                "agent_template": template,
+                "description": description,
+                "sort_order": index * 10,
+            },
+        )
+
+
+def _set_workstreams(mission: Mission, status: str, result: str = "") -> None:
+    for workstream in mission.workstreams.all():
+        workstream.status = status
+        if result:
+            workstream.result = result
+        workstream.save(update_fields=["status", "result", "updated_at"])
+
+
+def _estimate_cost(input_tokens: int, output_tokens: int) -> Decimal:
+    input_rate = Decimal(str(settings.OPC_COST_INPUT_PER_1K_USD or "0"))
+    output_rate = Decimal(str(settings.OPC_COST_OUTPUT_PER_1K_USD or "0"))
+    return ((Decimal(input_tokens) / Decimal(1000)) * input_rate) + ((Decimal(output_tokens) / Decimal(1000)) * output_rate)
+
+
+def _create_board_brief(mission: Mission, result_text: str) -> BoardBrief:
+    recommendations = []
+    if result_text:
+        recommendations.append("Review the OpenClaw result and approve the next concrete action.")
+    if mission.total_tokens:
+        recommendations.append("Use the captured token usage as the budget baseline for the next run.")
+    return BoardBrief.objects.update_or_create(
+        mission=mission,
+        defaults={
+            "title": f"Board Brief for {mission.session_id}",
+            "summary": result_text or "OpenClaw completed the mission without a visible final response.",
+            "recommendations": recommendations,
+            "risks": [
+                "The current MVP runs one OpenClaw agent turn; multi-workstream execution is represented but not yet independently delegated.",
+                "Gateway management RPCs may require pairing scope on this machine.",
+            ],
+            "sources": [
+                {"type": "mission", "id": str(mission.id)},
+                {"type": "openclaw-session", "id": mission.session_id},
+            ],
+        },
+    )[0]
+
+
 def _run_mission(mission_id: str) -> None:
     mission = Mission.objects.get(id=mission_id)
     _ensure_quality_gates(mission)
+    _ensure_workstreams(mission)
     mission.status = Mission.Status.RUNNING
     mission.started_at = timezone.now()
     mission.save(update_fields=["status", "started_at"])
     create_event(mission, "Mission accepted by OPC.", event_type="status")
+    _set_workstreams(mission, Workstream.Status.RUNNING)
 
     status = gateway_status()
     if status["ok"]:
@@ -242,6 +349,7 @@ def _run_mission(mission_id: str) -> None:
         mission.status = Mission.Status.FAILED
         mission.error = output[-4000:]
         _set_gate(mission, "agent-result", QualityGate.Status.FAILED, mission.error[:1000])
+        _set_workstreams(mission, Workstream.Status.FAILED, "OpenClaw agent execution failed.")
     else:
         mission.status = Mission.Status.SUCCEEDED
         result_text = data.get("meta", {}).get("finalAssistantVisibleText", "")
@@ -253,8 +361,12 @@ def _run_mission(mission_id: str) -> None:
         mission.input_tokens = int(usage.get("input") or 0)
         mission.output_tokens = int(usage.get("output") or 0)
         mission.total_tokens = int(usage.get("total") or 0)
-        mission.estimated_cost_usd = Decimal("0")
+        mission.estimated_cost_usd = _estimate_cost(mission.input_tokens, mission.output_tokens)
         _set_gate(mission, "agent-result", QualityGate.Status.PASSED, "OpenClaw returned a final assistant response.")
-        _set_gate(mission, "cost-capture", QualityGate.Status.PASSED, f"{mission.total_tokens} total tokens captured.")
+        _set_gate(mission, "cost-capture", QualityGate.Status.PASSED, f"{mission.total_tokens} total tokens captured; estimated cost ${mission.estimated_cost_usd}.")
+        _set_gate(mission, "founder-approval", QualityGate.Status.PENDING, "Awaiting founder review before follow-up execution.")
+        _set_workstreams(mission, Workstream.Status.SUCCEEDED, "Covered by the single-turn OpenClaw mission result.")
     mission.save()
+    if mission.status == Mission.Status.SUCCEEDED:
+        _create_board_brief(mission, mission.result_text)
     create_event(mission, f"Mission {mission.status}.", event_type="status", payload=serialize_mission(mission))

@@ -364,6 +364,55 @@ h1 {
   font-size: 2rem;
 }
 
+.workstream-grid,
+.brief-panel {
+  grid-column: 1 / -1;
+}
+
+.workstream-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workstream-grid article,
+.brief-panel {
+  border: 1px solid #4a504d;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.workstream-grid span {
+  color: #7ec4a6;
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.workstream-grid strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.workstream-grid p {
+  color: #d7dedb;
+  margin-bottom: 0;
+}
+
+.brief-panel h3 {
+  margin-bottom: 10px;
+}
+
+.brief-panel ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.brief-panel li {
+  margin-bottom: 6px;
+}
+
 .log-stream {
   grid-column: 1 / -1;
   max-height: 260px;
@@ -388,6 +437,214 @@ h1 {
 .log-stream p {
   margin-bottom: 0;
   overflow-wrap: anywhere;
+}
+
+.edit-team-btn {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #f3d77b;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 8px 16px;
+  margin-bottom: 18px;
+}
+
+.edit-team-btn:hover {
+  background: #e2c044;
+}
+
+.approval-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.approve-btn {
+  border: 0;
+  border-radius: 8px;
+  background: #7ec4a6;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 18px;
+}
+
+.approve-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.reject-btn {
+  border: 0;
+  border-radius: 8px;
+  background: #b95f43;
+  color: #f6f8f7;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 18px;
+}
+
+.reject-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 23, 23, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #f7fafa;
+  border: 1px solid #171717;
+  border-radius: 12px;
+  width: min(520px, 90vw);
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid #dfd2bd;
+}
+
+.modal-header h2 {
+  font-family: "Instrument Serif", serif;
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.close-btn {
+  border: 0;
+  background: transparent;
+  font-size: 1.6rem;
+  cursor: pointer;
+  color: #171717;
+}
+
+.modal-body {
+  padding: 18px 22px;
+}
+
+.edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.edit-form label {
+  font-weight: 700;
+  color: #171717;
+}
+
+.edit-form input,
+.edit-form textarea,
+.edit-form select {
+  border: 1px solid #171717;
+  border-radius: 6px;
+  padding: 10px;
+  font: inherit;
+  background: #ffffff;
+}
+
+.edit-form input:disabled {
+  background: #e7e7e7;
+  color: #666;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.save-btn {
+  border: 0;
+  border-radius: 6px;
+  background: #7ec4a6;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 18px;
+}
+
+.save-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.cancel-btn {
+  border: 1px solid #171717;
+  border-radius: 6px;
+  background: transparent;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 18px;
+}
+
+.template-list {
+  display: grid;
+  gap: 12px;
+}
+
+.template-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #171717;
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 2px 2px 0 #171717;
+}
+
+.template-item strong {
+  display: block;
+}
+
+.template-item span {
+  display: block;
+  color: #6b6254;
+  font-size: 0.9rem;
+}
+
+.template-item small {
+  color: #b95f43;
+  font-weight: 700;
+}
+
+.template-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.template-actions button {
+  border: 1px solid #171717;
+  border-radius: 6px;
+  background: transparent;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.template-actions .delete-btn {
+  border-color: #b95f43;
+  color: #b95f43;
+}
+
+.template-actions .delete-btn:hover {
+  background: #b95f43;
+  color: #f6f8f7;
 }
 
 .pipeline h2 {
@@ -426,6 +683,7 @@ h1 {
   .openclaw-strip,
   .agent-row,
   .pipeline-track,
+  .workstream-grid,
   .mission-console {
     grid-template-columns: 1fr 1fr;
   }
@@ -445,6 +703,7 @@ h1 {
   .openclaw-strip,
   .agent-row,
   .pipeline-track,
+  .workstream-grid,
   .mission-console {
     grid-template-columns: 1fr;
   }

@@ -1,7 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
-import { createCommand, fetchBriefing, fetchMission, missionLogUrl, type DeskBriefing, type Mission, type MissionEvent } from "./lib/api";
+import {
+  approveMission,
+  createCommand,
+  deleteTemplate,
+  fetchBriefing,
+  fetchMission,
+  fetchTemplates,
+  missionLogUrl,
+  rejectMission,
+  updateTemplate,
+  type DeskBriefing,
+  type ExecutiveAgent,
+  type Mission,
+  type MissionEvent,
+  type TemplateInput,
+} from "./lib/api";
 
 const briefing = ref<DeskBriefing | null>(null);
 const command = ref("Evaluate the OPC MVP delivery plan and return this week's action list.");
@@ -12,8 +27,15 @@ const submitting = ref(false);
 const error = ref("");
 const socket = ref<WebSocket | null>(null);
 
+const templates = ref<ExecutiveAgent[]>([]);
+const showEditor = ref(false);
+const editingTemplate = ref<ExecutiveAgent | null>(null);
+const editForm = ref<TemplateInput>({ id: "", name: "" });
+const savingTemplate = ref(false);
+
 const topAgent = computed(() => briefing.value?.team.find((agent) => agent.id === "ceo"));
 const directReports = computed(() => briefing.value?.team.filter((agent) => agent.reportsTo === "coo") ?? []);
+const pendingApprovalGate = computed(() => mission.value?.qualityGates.find((gate) => gate.name === "founder-approval" && gate.status === "pending"));
 
 async function loadBriefing() {
   try {
@@ -23,6 +45,15 @@ async function loadBriefing() {
     error.value = caught instanceof Error ? caught.message : "OPC is temporarily unreachable.";
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadTemplates() {
+  try {
+    const result = await fetchTemplates();
+    templates.value = result.templates;
+  } catch (caught) {
+    console.error("Failed to load templates:", caught);
   }
 }
 
@@ -70,6 +101,77 @@ async function pollMission(id: string) {
   }
 }
 
+function openEditor() {
+  showEditor.value = true;
+  void loadTemplates();
+}
+
+function startEdit(template: ExecutiveAgent) {
+  editingTemplate.value = template;
+  editForm.value = {
+    id: template.id,
+    name: template.name,
+    title: template.title,
+    mission: template.mission,
+    reportsTo: template.reportsTo ?? "",
+    status: template.status,
+    tools: template.tools,
+    modelPreference: template.modelPreference,
+    budgetLimitUsd: parseFloat(template.budgetLimitUsd) || 0,
+  };
+}
+
+function cancelEdit() {
+  editingTemplate.value = null;
+  editForm.value = { id: "", name: "" };
+}
+
+async function saveTemplate() {
+  try {
+    savingTemplate.value = true;
+    if (editingTemplate.value) {
+      await updateTemplate(editingTemplate.value.id, editForm.value);
+    } else {
+      await updateTemplate(editForm.value.id, editForm.value);
+    }
+    await loadTemplates();
+    await loadBriefing();
+    cancelEdit();
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Failed to save template.";
+  } finally {
+    savingTemplate.value = false;
+  }
+}
+
+async function removeTemplate(id: string) {
+  try {
+    await deleteTemplate(id);
+    await loadTemplates();
+    await loadBriefing();
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Failed to delete template.";
+  }
+}
+
+async function handleApprove() {
+  if (!mission.value) return;
+  try {
+    mission.value = await approveMission(mission.value.id);
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Approval failed.";
+  }
+}
+
+async function handleReject() {
+  if (!mission.value) return;
+  try {
+    mission.value = await rejectMission(mission.value.id);
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Rejection failed.";
+  }
+}
+
 onMounted(loadBriefing);
 </script>
 
@@ -98,6 +200,10 @@ onMounted(loadBriefing);
               <span>{{ gate.status }}</span>
             </li>
           </ul>
+          <div v-if="pendingApprovalGate" class="approval-actions">
+            <button class="approve-btn" @click="handleApprove" :disabled="savingTemplate">Approve</button>
+            <button class="reject-btn" @click="handleReject" :disabled="savingTemplate">Reject</button>
+          </div>
         </div>
       </aside>
 
@@ -150,6 +256,7 @@ onMounted(loadBriefing);
           </section>
 
           <section class="org-map">
+            <button class="edit-team-btn" @click="openEditor">Edit Team</button>
             <article v-if="topAgent" class="agent-card ceo-card">
               <span>{{ topAgent.name }}</span>
               <h3>{{ topAgent.title }}</h3>
@@ -169,7 +276,7 @@ onMounted(loadBriefing);
                 <span>{{ agent.name }}</span>
                 <h3>{{ agent.title }}</h3>
                 <p>{{ agent.mission }}</p>
-                <small>{{ agent.status }}</small>
+                <small>{{ agent.status }} · {{ agent.tools.length }} tools</small>
               </article>
             </div>
           </section>
@@ -189,7 +296,8 @@ onMounted(loadBriefing);
             <div>
               <p class="eyebrow">OpenClaw Mission</p>
               <h2>{{ mission.status }}</h2>
-              <p v-if="mission.resultText" class="result-text">{{ mission.resultText }}</p>
+              <p v-if="mission.boardBrief" class="result-text">{{ mission.boardBrief.summary }}</p>
+              <p v-else-if="mission.resultText" class="result-text">{{ mission.resultText }}</p>
               <p v-else-if="mission.error" class="result-text error-text">{{ mission.error }}</p>
               <p v-else class="result-text">OpenClaw is processing this Founder Command.</p>
             </div>
@@ -197,7 +305,20 @@ onMounted(loadBriefing);
               <span>{{ mission.usage.input }}</span>
               <span>{{ mission.usage.output }}</span>
               <span>{{ mission.usage.total }}</span>
-              <small>input / output / total tokens</small>
+              <small>input / output / total tokens · ${{ mission.usage.estimatedCostUsd }}</small>
+            </div>
+            <div class="workstream-grid">
+              <article v-for="workstream in mission.workstreams" :key="workstream.id">
+                <span>{{ workstream.owner }} · {{ workstream.status }}</span>
+                <strong>{{ workstream.title }}</strong>
+                <p>{{ workstream.description }}</p>
+              </article>
+            </div>
+            <div v-if="mission.boardBrief" class="brief-panel">
+              <h3>{{ mission.boardBrief.title }}</h3>
+              <ul>
+                <li v-for="item in mission.boardBrief.recommendations" :key="item">{{ item }}</li>
+              </ul>
             </div>
             <div class="log-stream">
               <article v-for="event in liveEvents" :key="event.id">
@@ -209,5 +330,51 @@ onMounted(loadBriefing);
         </template>
       </section>
     </section>
+
+    <div v-if="showEditor" class="modal-overlay" @click.self="showEditor = false">
+      <div class="modal">
+        <header class="modal-header">
+          <h2>Agent Templates</h2>
+          <button class="close-btn" @click="showEditor = false">×</button>
+        </header>
+        <div class="modal-body">
+          <div v-if="editingTemplate" class="edit-form">
+            <label>ID</label>
+            <input v-model="editForm.id" disabled />
+            <label>Name</label>
+            <input v-model="editForm.name" />
+            <label>Title</label>
+            <input v-model="editForm.title" />
+            <label>Mission</label>
+            <textarea v-model="editForm.mission" rows="3" />
+            <label>Status</label>
+            <select v-model="editForm.status">
+              <option value="ready">Ready</option>
+              <option value="standby">Standby</option>
+              <option value="disabled">Disabled</option>
+            </select>
+            <label>Budget Limit (USD)</label>
+            <input v-model.number="editForm.budgetLimitUsd" type="number" step="0.01" />
+            <div class="form-actions">
+              <button class="save-btn" @click="saveTemplate" :disabled="savingTemplate">{{ savingTemplate ? "Saving..." : "Save" }}</button>
+              <button class="cancel-btn" @click="cancelEdit">Cancel</button>
+            </div>
+          </div>
+          <div v-else class="template-list">
+            <article v-for="t in templates" :key="t.id" class="template-item">
+              <div>
+                <strong>{{ t.name }}</strong>
+                <span>{{ t.title }}</span>
+                <small>{{ t.status }}</small>
+              </div>
+              <div class="template-actions">
+                <button @click="startEdit(t)">Edit</button>
+                <button class="delete-btn" @click="removeTemplate(t.id)">Delete</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 </template>

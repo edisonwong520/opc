@@ -93,14 +93,15 @@ Each message is a `MissionEvent` JSON object:
 
 - `Mission`: user command, OpenClaw session id, status, result, raw output, and token usage
 - `MissionEvent`: append-only mission log and status stream
-- `QualityGate`: gateway health, model provider, agent result, and cost capture checks
+- `QualityGate`: gateway health, model provider, agent result, cost capture, and founder approval checks
+- `AgentTemplate`: role name, mission, tools, model preference, and budget limit
+- `Workstream`: represented subtask, owner agent, state, and result per mission
+- `BoardBrief`: final executive report with recommendations, risks, and sources
 
 Future models:
 
-- `AgentTemplate`: role name, mission, tools, model preference, and budget limit
-- `Workstream`: subtask, owner agent, dependencies, and state
 - `AgentRun`: runtime session, logs, token usage, cost, and result
-- `BoardBrief`: final executive report with source references and recommendations
+- `ApprovalDecision`: founder approval action, decision notes, and reviewer metadata
 
 ## OpenClaw Boundary
 
