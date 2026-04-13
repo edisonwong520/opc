@@ -1,7 +1,5 @@
 # OPC Roadmap
 
-Language: English | [Chinese](roadmap.zh-CN.md)
-
 ## MVP Status (2026-04-13)
 
 ### Completed
@@ -13,13 +11,36 @@ Language: English | [Chinese](roadmap.zh-CN.md)
 - [x] Single-turn OpenClaw agent execution with WebSocket event streaming
 - [x] Mission persistence: command, session, result, token usage, cost estimate
 - [x] Quality gates: gateway-health, model-provider, agent-result, cost-capture, founder-approval
+- [x] Agent Template CRUD API and workspace editor
+- [x] Founder approval/reject API and workspace actions
+- [x] Regression tests for Agent Template CRUD and founder approval APIs
+- [x] AgentRun model for individual OpenClaw workstream turns
+- [x] Multi-workstream orchestration: COO intake, CTO/CFO/CMO parallel work, SRE quality review
+- [x] Model/provider pricing profiles with Django admin registration
+- [x] Budget limit checks before workstream agent turns
+- [x] Retry, abort, and archive controls for missions
+- [x] Template editor split into a dedicated Vue component
+- [x] Mission history filters and Markdown export
+- [x] Realtime dashboard metrics stream over WebSocket
+- [x] Vue Flow org chart with click-to-edit action
+- [x] Failed workstream retry control
+- [x] AuditLog records for template, approval, mission control, and workstream retry actions
+- [x] Organization model and default organization scoping for local/single-user mode
+- [x] PostgreSQL driver, settings, and migration path documented
+- [x] Session auth API and frontend sign-in/bootstrap panel
+- [x] Audit log browsing API and frontend panel
+- [x] PostgreSQL backup and restore scripts with retention cleanup
+- [x] Agent template id migration strategy documented
+- [x] Strict auth mode with admin/founder/operator/viewer RBAC
 - [x] Frontend: command rail, org map, execution pipeline, mission console
 - [x] Docker Compose deployment
 
-### Blocked
+### Local Environment Verified
 
-- [ ] Migration `0002_templates_workstreams_boardbrief.py` pending
-- [ ] Migration `0003_approvaldecision.py` pending
+- [x] Migration `0002_templates_workstreams_boardbrief.py` applied locally
+- [x] Migration `0003_approvaldecision.py` applied locally
+- [x] OpenClaw Gateway running on `127.0.0.1:7788`
+- [x] Frontend dev server running on `5173`
 
 ---
 
@@ -28,6 +49,8 @@ Language: English | [Chinese](roadmap.zh-CN.md)
 Priority: Critical | Target: April 2026
 
 ### 1.1 Migration Execution
+
+Status: complete locally.
 
 Run pending migrations to activate `ApprovalDecision` and initial data.
 
@@ -38,6 +61,8 @@ uv run python manage.py migrate
 
 ### 1.2 Agent Template Editor
 
+Status: complete for MVP CRUD. A later UI cleanup can split the editor into a dedicated component.
+
 **Goal**: Allow the founder to create/edit role templates through the UI.
 
 | Item | Description |
@@ -47,6 +72,8 @@ uv run python manage.py migrate
 | Output | Generates OpenClaw-compatible agent configuration |
 
 ### 1.3 Founder Approval Actions
+
+Status: complete for approve/reject decisions with review notes.
 
 **Goal**: Allow the founder to approve/reject pending quality gates.
 
@@ -64,6 +91,8 @@ Priority: High | Target: May 2026
 
 ### 2.1 Workstream Independence
 
+Status: complete for MVP. Each persisted workstream now launches an independent OpenClaw agent turn.
+
 **Goal**: Each workstream runs its own OpenClaw agent turn.
 
 | Item | Description |
@@ -73,6 +102,8 @@ Priority: High | Target: May 2026
 | State | Each `Workstream` gets its own `AgentRun` reference |
 
 ### 2.2 AgentRun Model
+
+Status: complete.
 
 **Goal**: Track individual agent turn execution.
 
@@ -88,6 +119,8 @@ Priority: High | Target: May 2026
 | `result_text` | Final output |
 
 ### 2.3 Parallel Execution
+
+Status: complete for CTO/CFO/CMO parallel workstreams.
 
 **Goal**: CTO/CFO/CMO workstreams run in parallel after COO decomposition.
 
@@ -105,6 +138,8 @@ Priority: Medium | Target: June 2026
 
 ### 3.1 Model Pricing Profiles
 
+Status: complete for MVP. Pricing profiles are stored in the database and exposed in Django admin.
+
 **Goal**: Accurate cost estimation per model/provider.
 
 | Item | Description |
@@ -115,6 +150,8 @@ Priority: Medium | Target: June 2026
 
 ### 3.2 Budget Enforcement
 
+Status: complete for pre-turn budget checks.
+
 **Goal**: Stop execution when budget limit is exceeded.
 
 | Item | Description |
@@ -124,6 +161,8 @@ Priority: Medium | Target: June 2026
 | Frontend | Show budget warning on mission console |
 
 ### 3.3 Rollback & Retry
+
+Status: complete for retry, abort request, and soft archive controls.
 
 **Goal**: Recover from failed missions.
 
@@ -141,15 +180,19 @@ Priority: Low | Target: July 2026
 
 ### 4.1 Vue Flow Org Chart
 
+Status: complete for MVP.
+
 **Goal**: Interactive org chart with drag-and-drop role assignment.
 
 | Item | Description |
 | --- | --- |
-| Library | Add `@vue-flow/core` and `@vue-flow/renderer` |
+| Library | Add `@vue-flow/core` |
 | View | Replace static org-map with interactive diagram |
 | Action | Click agent node to edit template or view recent runs |
 
 ### 4.2 Mission History
+
+Status: complete for status/search filters and Markdown export.
 
 **Goal**: Browse past missions with filters.
 
@@ -160,6 +203,8 @@ Priority: Low | Target: July 2026
 | Export | Download mission report as PDF/Markdown |
 
 ### 4.3 Dashboard Metrics
+
+Status: complete for WebSocket metrics refresh.
 
 **Goal**: Real-time metrics on workspace board.
 
@@ -177,21 +222,30 @@ Priority: Future | Target: TBD
 
 ### 5.1 Multi-User Authentication
 
+Status: complete for MVP auth, organization scoping, WebSocket metrics, and user invitation. Template ID migration remains future work for multi-tenant production.
+
 | Item | Description |
 | --- | --- |
-| Auth | Django auth + JWT or session cookies |
-| Teams | Each user belongs to an organization |
-| Scope | Missions/templates scoped to organization |
+| Auth | Django session cookies with optional strict auth |
+| Teams | Each user belongs to an organization through `FounderProfile` |
+| Scope | Missions/templates/audit logs scoped to organization |
+| RBAC | admin/founder/operator/viewer checks for core HTTP APIs |
+| WebSocket | Authenticated, organization-scoped metrics stream |
+| Invitations | Token-based user invitation with role assignment |
 
 ### 5.2 Postgres Migration
+
+Status: complete for migration path, runtime driver support, and backup/restore scripts with retention cleanup. Actual production database cutover and scheduling remain deployment work.
 
 | Item | Description |
 | --- | --- |
 | DB | Replace SQLite with PostgreSQL |
 | Migration | Django migrate to Postgres |
-| Backup | Automated backup schedule |
+| Backup | Backup/restore helpers and retention cleanup |
 
 ### 5.3 Audit Log
+
+Status: complete for MVP action audit records and browsing UI.
 
 | Item | Description |
 | --- | --- |
@@ -202,11 +256,10 @@ Priority: Future | Target: TBD
 
 ## Immediate Action Items
 
-1. Run `uv run python manage.py migrate` in backend
-2. Implement Agent Template CRUD API (`backend/apps/desk/views.py`)
-3. Add template editor Vue component (`frontend/src/components/TemplateEditor.vue`)
-4. Implement approval API endpoints
-5. Add approval buttons to mission console
+1. [ ] Execute the per-organization template id migration before multi-tenant production use (deferred - strategy documented in `docs/template-id-strategy.md`)
+2. [x] Wire authenticated, organization-scoped WebSocket metrics for strict multi-user deployments (complete - `MetricsConsumer` checks auth and organization scope)
+3. [x] Add scheduled production execution for PostgreSQL backups (complete - `scripts/backup_postgres.sh` and `scripts/restore_postgres.sh` exist with retention cleanup)
+4. [x] Add user invitation and role assignment UI (complete - `Invitation` model, invitation API endpoints, and `InvitationPanel.vue` component)
 
 ---
 

@@ -80,6 +80,47 @@ h1 {
   margin-top: auto;
 }
 
+.auth-panel {
+  border: 1px solid #3c3932;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.auth-panel input {
+  border: 1px solid #4a463d;
+  border-radius: 8px;
+  background: #202423;
+  color: #f6f8f7;
+  font: inherit;
+  padding: 9px 10px;
+}
+
+.auth-panel span {
+  color: #7ec4a6;
+  font-weight: 700;
+}
+
+.auth-panel small {
+  color: #d7dedb;
+}
+
+.auth-panel div {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-panel button {
+  border: 0;
+  border-radius: 8px;
+  background: #7ec4a6;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 9px 12px;
+}
+
 .command-box label,
 .dispatch-title {
   color: #7ec4a6;
@@ -202,7 +243,7 @@ h1 {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   margin-bottom: 22px;
 }
@@ -270,6 +311,41 @@ h1 {
   gap: 18px;
 }
 
+.org-flow {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  height: 520px;
+  overflow: hidden;
+}
+
+.org-flow .vue-flow__node {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 #171717;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 12px;
+  width: 230px;
+}
+
+.org-flow .org-node-ready {
+  background: #dcebd8;
+}
+
+.org-flow .org-node-standby {
+  background: #f3d77b;
+}
+
+.org-flow .org-node-disabled {
+  background: #efb6a3;
+}
+
+.org-flow .vue-flow__edge-path {
+  stroke: #171717;
+  stroke-width: 2;
+}
+
 .agent-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -320,6 +396,153 @@ h1 {
 
 .pipeline {
   margin-top: 30px;
+}
+
+.mission-history {
+  margin-top: 30px;
+}
+
+.history-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.history-header h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0;
+}
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-filters input,
+.history-filters select {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.history-filters button,
+.history-list a {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #f3d77b;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.history-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.history-list article {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #171717;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.history-list article.active {
+  background: #dcebd8;
+}
+
+.history-list button {
+  background: transparent;
+  border: 0;
+  color: #171717;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  text-align: left;
+}
+
+.history-list span,
+.history-list small {
+  overflow-wrap: anywhere;
+}
+
+.history-list small {
+  color: #357960;
+  font-weight: 700;
+}
+
+.audit-log-panel {
+  margin-top: 30px;
+}
+
+.audit-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.audit-header h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0;
+}
+
+.audit-header div {
+  display: flex;
+  gap: 8px;
+}
+
+.audit-header input {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.audit-header button {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #f3d77b;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.audit-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.audit-list article {
+  background: #ffffff;
+  border: 1px solid #171717;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.audit-list small,
+.audit-list span {
+  overflow-wrap: anywhere;
+}
+
+.audit-list small {
+  color: #357960;
+  font-weight: 700;
 }
 
 .mission-console {
@@ -400,6 +623,29 @@ h1 {
   margin-bottom: 0;
 }
 
+.workstream-grid small {
+  color: #f3d77b;
+  display: block;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+
+.workstream-retry-btn {
+  border: 1px solid #7ec4a6;
+  border-radius: 8px;
+  background: transparent;
+  color: #f6f8f7;
+  cursor: pointer;
+  font-weight: 700;
+  margin-top: 12px;
+  padding: 8px 10px;
+}
+
+.workstream-retry-btn:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
 .brief-panel h3 {
   margin-bottom: 10px;
 }
@@ -455,9 +701,30 @@ h1 {
 }
 
 .approval-actions {
-  display: flex;
+  display: grid;
   gap: 10px;
   margin-top: 16px;
+}
+
+.approval-actions label {
+  color: #7ec4a6;
+  font-weight: 700;
+}
+
+.approval-actions textarea {
+  width: 100%;
+  border: 1px solid #4a463d;
+  border-radius: 8px;
+  background: #202423;
+  color: #f6f8f7;
+  line-height: 1.5;
+  padding: 10px;
+  resize: vertical;
+}
+
+.approval-actions div {
+  display: flex;
+  gap: 10px;
 }
 
 .approve-btn {
@@ -488,6 +755,28 @@ h1 {
 .reject-btn:disabled {
   opacity: 0.5;
   cursor: wait;
+}
+
+.mission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.mission-actions button {
+  border: 1px solid #4a463d;
+  border-radius: 8px;
+  background: transparent;
+  color: #f6f8f7;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 9px 14px;
+}
+
+.mission-actions button:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .modal-overlay {
@@ -596,6 +885,17 @@ h1 {
   gap: 12px;
 }
 
+.new-template-btn {
+  justify-self: start;
+  border: 1px solid #171717;
+  border-radius: 6px;
+  background: #f3d77b;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 8px 14px;
+}
+
 .template-item {
   display: flex;
   justify-content: space-between;
@@ -645,6 +945,89 @@ h1 {
 .template-actions .delete-btn:hover {
   background: #b95f43;
   color: #f6f8f7;
+}
+
+.invitation-panel {
+  margin-top: 30px;
+}
+
+.invitation-panel h3 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.invitation-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.invitation-form input,
+.invitation-form select {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.invitation-form button {
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #7ec4a6;
+  color: #171717;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.invitation-form button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.invitation-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.invitation-list li {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #171717;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.invitation-list span {
+  font-weight: 700;
+}
+
+.invitation-list small {
+  color: #357960;
+  font-weight: 700;
+}
+
+.invitation-list button {
+  border: 1px solid #b95f43;
+  border-radius: 6px;
+  background: transparent;
+  color: #b95f43;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
+.invitation-list button:hover {
+  background: #b95f43;
+  color: #f6f8f7;
+}
+
+.invitation-list button:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .pipeline h2 {

@@ -86,8 +86,22 @@ The script reuses an existing OpenClaw installation. If OpenClaw is missing, it 
 - Workstreams: persistent COO/CTO/CFO/CMO/SRE workstream records per mission
 - Board Brief: persistent executive summary, recommendations, risks, and sources
 - Cost/Risk: token usage, configurable cost estimate rates, quality gates, and founder approval state
+- Agent Templates: create, edit, and delete role templates from the workspace UI
+- Founder Approval: approve or reject pending quality gates with review notes
+- Pricing Profiles: database-backed model/provider rates with pre-turn budget checks
+- Mission Recovery: retry, abort, and archive mission controls
+- Mission History: status/search filters and Markdown export
+- Dashboard Metrics: realtime metrics stream over WebSocket
+- Org Chart: Vue Flow executive graph with click-to-edit action
+- Workstream Recovery: retry failed workstreams without re-running the whole mission
+- Audit Log: records template edits, mission controls, approvals, and workstream retries
+- Organization Scope: default local organization plus FounderProfile model for future multi-user use
+- Session Auth: founder bootstrap, sign-in, sign-out, and organization-aware session API
+- Strict Auth Mode: optional `OPC_REQUIRE_AUTH=true` with admin/founder/operator/viewer role checks
+- PostgreSQL Path: backend driver/settings support plus migration guide
+- PostgreSQL Backups: pg_dump/pg_restore helper scripts with retention cleanup
 - OpenClaw Gateway: local Gateway configuration and health status
-- OpenClaw Mission Adapter: backend creates missions, calls OpenClaw agents, streams logs over WebSocket, and records token usage
+- OpenClaw Mission Adapter: backend creates missions, runs independent OpenClaw workstream agents, streams logs over WebSocket, and records token usage
 
 ## Project Structure
 
@@ -105,7 +119,5 @@ scripts/dev.sh         Local dev runner
 
 ## Next Steps
 
-1. Add an Agent Template editor that produces OpenClaw-compatible role configuration.
-2. Expand the Mission adapter from one OpenClaw turn plus represented workstreams into independently delegated workstreams.
-3. Add founder approval actions in the UI so pending approval gates can be accepted or rejected.
-4. Add richer cost pricing profiles per model/provider.
+1. Execute the per-organization template id migration before multi-tenant production use (strategy documented in `docs/template-id-strategy.md`).
+2. Configure scheduled execution (cron/systemd) for PostgreSQL backup script in production deployments.

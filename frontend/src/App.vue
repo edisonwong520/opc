@@ -2,23 +2,33 @@
 import { computed, onMounted, ref } from "vue";
 
 import {
+  abortMission,
   approveMission,
+  archiveMission,
   createCommand,
-  deleteTemplate,
   fetchBriefing,
   fetchMission,
-  fetchTemplates,
+  fetchMissions,
+  fetchSession,
+  missionExportUrl,
+  metricsLogUrl,
   missionLogUrl,
   rejectMission,
-  updateTemplate,
+  retryMission,
+  retryWorkstream,
   type DeskBriefing,
-  type ExecutiveAgent,
   type Mission,
   type MissionEvent,
-  type TemplateInput,
+  type SessionInfo,
 } from "./lib/api";
+import AuditLogPanel from "./components/AuditLogPanel.vue";
+import AuthPanel from "./components/AuthPanel.vue";
+import InvitationPanel from "./components/InvitationPanel.vue";
+import OrgChart from "./components/OrgChart.vue";
+import TemplateEditor from "./components/TemplateEditor.vue";
 
 const briefing = ref<DeskBriefing | null>(null);
+const session = ref<SessionInfo | null>(null);
 const command = ref("Evaluate the OPC MVP delivery plan and return this week's action list.");
 const mission = ref<Mission | null>(null);
 const liveEvents = ref<MissionEvent[]>([]);
@@ -26,15 +36,18 @@ const loading = ref(true);
 const submitting = ref(false);
 const error = ref("");
 const socket = ref<WebSocket | null>(null);
+const metricsSocket = ref<WebSocket | null>(null);
 
-const templates = ref<ExecutiveAgent[]>([]);
 const showEditor = ref(false);
-const editingTemplate = ref<ExecutiveAgent | null>(null);
-const editForm = ref<TemplateInput>({ id: "", name: "" });
-const savingTemplate = ref(false);
+const approvalNotes = ref("");
+const actingOnApproval = ref(false);
+const actingOnMission = ref(false);
+const retryingWorkstreamId = ref<number | null>(null);
+const missionHistory = ref<Mission[]>([]);
+const historySearch = ref("");
+const historyStatus = ref("");
+const loadingHistory = ref(false);
 
-const topAgent = computed(() => briefing.value?.team.find((agent) => agent.id === "ceo"));
-const directReports = computed(() => briefing.value?.team.filter((agent) => agent.reportsTo === "coo") ?? []);
 const pendingApprovalGate = computed(() => mission.value?.qualityGates.find((gate) => gate.name === "founder-approval" && gate.status === "pending"));
 
 async function loadBriefing() {
@@ -48,12 +61,11 @@ async function loadBriefing() {
   }
 }
 
-async function loadTemplates() {
+async function loadSession() {
   try {
-    const result = await fetchTemplates();
-    templates.value = result.templates;
+    session.value = await fetchSession();
   } catch (caught) {
-    console.error("Failed to load templates:", caught);
+    error.value = caught instanceof Error ? caught.message : "Session unavailable.";
   }
 }
 
@@ -64,6 +76,7 @@ async function submitCommand() {
   try {
     submitting.value = true;
     mission.value = await createCommand(command.value.trim());
+    void loadMissionHistory();
     liveEvents.value = mission.value.events ?? [];
     connectMissionSocket(mission.value.id);
     void pollMission(mission.value.id);
@@ -71,6 +84,27 @@ async function submitCommand() {
     error.value = caught instanceof Error ? caught.message : "Command dispatch failed.";
   } finally {
     submitting.value = false;
+  }
+}
+
+async function loadMissionHistory() {
+  try {
+    loadingHistory.value = true;
+    const result = await fetchMissions({ status: historyStatus.value, search: historySearch.value });
+    missionHistory.value = result.missions;
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Mission history unavailable.";
+  } finally {
+    loadingHistory.value = false;
+  }
+}
+
+async function openMission(id: string) {
+  mission.value = await fetchMission(id);
+  liveEvents.value = mission.value.events ?? [];
+  if (["queued", "running"].includes(mission.value.status)) {
+    connectMissionSocket(mission.value.id);
+    void pollMission(mission.value.id);
   }
 }
 
@@ -89,6 +123,17 @@ function connectMissionSocket(id: string) {
   };
 }
 
+function connectMetricsSocket() {
+  metricsSocket.value?.close();
+  metricsSocket.value = new WebSocket(metricsLogUrl());
+  metricsSocket.value.onmessage = (event) => {
+    const parsed = JSON.parse(event.data) as { type: string; metrics: DeskBriefing["metrics"] };
+    if (parsed.type === "metrics" && briefing.value) {
+      briefing.value = { ...briefing.value, metrics: parsed.metrics };
+    }
+  };
+}
+
 async function pollMission(id: string) {
   for (let i = 0; i < 180; i += 1) {
     const fresh = await fetchMission(id);
@@ -103,76 +148,102 @@ async function pollMission(id: string) {
 
 function openEditor() {
   showEditor.value = true;
-  void loadTemplates();
 }
 
-function startEdit(template: ExecutiveAgent) {
-  editingTemplate.value = template;
-  editForm.value = {
-    id: template.id,
-    name: template.name,
-    title: template.title,
-    mission: template.mission,
-    reportsTo: template.reportsTo ?? "",
-    status: template.status,
-    tools: template.tools,
-    modelPreference: template.modelPreference,
-    budgetLimitUsd: parseFloat(template.budgetLimitUsd) || 0,
-  };
-}
-
-function cancelEdit() {
-  editingTemplate.value = null;
-  editForm.value = { id: "", name: "" };
-}
-
-async function saveTemplate() {
-  try {
-    savingTemplate.value = true;
-    if (editingTemplate.value) {
-      await updateTemplate(editingTemplate.value.id, editForm.value);
-    } else {
-      await updateTemplate(editForm.value.id, editForm.value);
-    }
-    await loadTemplates();
-    await loadBriefing();
-    cancelEdit();
-  } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : "Failed to save template.";
-  } finally {
-    savingTemplate.value = false;
-  }
-}
-
-async function removeTemplate(id: string) {
-  try {
-    await deleteTemplate(id);
-    await loadTemplates();
-    await loadBriefing();
-  } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : "Failed to delete template.";
-  }
+function handleSessionChanged(nextSession: SessionInfo) {
+  session.value = nextSession;
+  void loadBriefing();
+  void loadMissionHistory();
 }
 
 async function handleApprove() {
   if (!mission.value) return;
   try {
-    mission.value = await approveMission(mission.value.id);
+    actingOnApproval.value = true;
+    mission.value = await approveMission(mission.value.id, approvalNotes.value);
+    approvalNotes.value = "";
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : "Approval failed.";
+  } finally {
+    actingOnApproval.value = false;
   }
 }
 
 async function handleReject() {
   if (!mission.value) return;
   try {
-    mission.value = await rejectMission(mission.value.id);
+    actingOnApproval.value = true;
+    mission.value = await rejectMission(mission.value.id, approvalNotes.value);
+    approvalNotes.value = "";
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : "Rejection failed.";
+  } finally {
+    actingOnApproval.value = false;
   }
 }
 
-onMounted(loadBriefing);
+async function handleAbort() {
+  if (!mission.value) return;
+  try {
+    actingOnMission.value = true;
+    mission.value = await abortMission(mission.value.id);
+    void loadMissionHistory();
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Abort failed.";
+  } finally {
+    actingOnMission.value = false;
+  }
+}
+
+async function handleRetry() {
+  if (!mission.value) return;
+  try {
+    actingOnMission.value = true;
+    mission.value = await retryMission(mission.value.id);
+    liveEvents.value = mission.value.events ?? [];
+    connectMissionSocket(mission.value.id);
+    void pollMission(mission.value.id);
+    void loadMissionHistory();
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Retry failed.";
+  } finally {
+    actingOnMission.value = false;
+  }
+}
+
+async function handleArchive() {
+  if (!mission.value) return;
+  try {
+    actingOnMission.value = true;
+    mission.value = await archiveMission(mission.value.id);
+    void loadMissionHistory();
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Archive failed.";
+  } finally {
+    actingOnMission.value = false;
+  }
+}
+
+async function handleWorkstreamRetry(workstreamId: number) {
+  if (!mission.value) return;
+  try {
+    retryingWorkstreamId.value = workstreamId;
+    mission.value = await retryWorkstream(mission.value.id, workstreamId);
+    liveEvents.value = mission.value.events ?? [];
+    void loadMissionHistory();
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : "Workstream retry failed.";
+  } finally {
+    retryingWorkstreamId.value = null;
+  }
+}
+
+onMounted(() => {
+  void loadSession();
+  void loadBriefing();
+  void loadMissionHistory();
+  connectMetricsSocket();
+});
 </script>
 
 <template>
@@ -182,6 +253,12 @@ onMounted(loadBriefing);
         <p class="eyebrow">OpenClaw Executive OS</p>
         <h1>OPC</h1>
         <p class="lede">Give one founder command to an AI leadership team. COO decomposes, CTO/CFO/CMO work in parallel, and CEO returns the board brief.</p>
+
+        <AuthPanel
+          :session="session"
+          @changed="handleSessionChanged"
+          @error="(message) => (error = message)"
+        />
 
         <form class="command-box" @submit.prevent="submitCommand">
           <label for="command">Founder Command</label>
@@ -201,8 +278,17 @@ onMounted(loadBriefing);
             </li>
           </ul>
           <div v-if="pendingApprovalGate" class="approval-actions">
-            <button class="approve-btn" @click="handleApprove" :disabled="savingTemplate">Approve</button>
-            <button class="reject-btn" @click="handleReject" :disabled="savingTemplate">Reject</button>
+            <label for="approval-notes">Review Notes</label>
+            <textarea id="approval-notes" v-model="approvalNotes" rows="3" placeholder="Decision notes for this mission" />
+            <div>
+              <button class="approve-btn" @click="handleApprove" :disabled="actingOnApproval">Approve</button>
+              <button class="reject-btn" @click="handleReject" :disabled="actingOnApproval">Reject</button>
+            </div>
+          </div>
+          <div class="mission-actions">
+            <button v-if="['queued', 'running'].includes(mission.status)" @click="handleAbort" :disabled="actingOnMission">Abort</button>
+            <button v-if="['failed', 'aborted'].includes(mission.status)" @click="handleRetry" :disabled="actingOnMission">Retry</button>
+            <button v-if="!['queued', 'running'].includes(mission.status) && !mission.archivedAt" @click="handleArchive" :disabled="actingOnMission">Archive</button>
           </div>
         </div>
       </aside>
@@ -253,33 +339,17 @@ onMounted(loadBriefing);
               <span>{{ briefing.metrics.qualityGates }}</span>
               <p>Quality Gates</p>
             </article>
-          </section>
-
-          <section class="org-map">
-            <button class="edit-team-btn" @click="openEditor">Edit Team</button>
-            <article v-if="topAgent" class="agent-card ceo-card">
-              <span>{{ topAgent.name }}</span>
-              <h3>{{ topAgent.title }}</h3>
-              <p>{{ topAgent.mission }}</p>
+            <article>
+              <span>{{ briefing.metrics.agentRuns }}</span>
+              <p>Agent Runs</p>
             </article>
-
-            <div class="agent-row">
-              <article v-for="agent in briefing.team.filter((item) => item.reportsTo === 'ceo')" :key="agent.id" class="agent-card coo-card">
-                <span>{{ agent.name }}</span>
-                <h3>{{ agent.title }}</h3>
-                <p>{{ agent.mission }}</p>
-              </article>
-            </div>
-
-            <div class="agent-row reports">
-              <article v-for="agent in directReports" :key="agent.id" class="agent-card">
-                <span>{{ agent.name }}</span>
-                <h3>{{ agent.title }}</h3>
-                <p>{{ agent.mission }}</p>
-                <small>{{ agent.status }} · {{ agent.tools.length }} tools</small>
-              </article>
-            </div>
+            <article>
+              <span>{{ Math.round(briefing.metrics.successRate * 100) }}%</span>
+              <p>Success Rate</p>
+            </article>
           </section>
+
+          <OrgChart :agents="briefing.team" @edit="openEditor" />
 
           <section class="pipeline">
             <h2>Execution Pipeline</h2>
@@ -291,6 +361,38 @@ onMounted(loadBriefing);
               </article>
             </div>
           </section>
+
+          <section class="mission-history">
+            <div class="history-header">
+              <h2>Mission History</h2>
+              <div class="history-filters">
+                <input v-model="historySearch" placeholder="Search commands" @keyup.enter="loadMissionHistory" />
+                <select v-model="historyStatus" @change="loadMissionHistory">
+                  <option value="">All Statuses</option>
+                  <option value="queued">Queued</option>
+                  <option value="running">Running</option>
+                  <option value="succeeded">Succeeded</option>
+                  <option value="failed">Failed</option>
+                  <option value="aborted">Aborted</option>
+                </select>
+                <button @click="loadMissionHistory" :disabled="loadingHistory">{{ loadingHistory ? "Loading..." : "Filter" }}</button>
+              </div>
+            </div>
+            <div class="history-list">
+              <article v-for="item in missionHistory" :key="item.id" :class="{ active: mission?.id === item.id }">
+                <button @click="openMission(item.id)">
+                  <strong>{{ item.status }}</strong>
+                  <span>{{ item.command }}</span>
+                  <small>{{ item.sessionId }} · ${{ item.usage.estimatedCostUsd }}</small>
+                </button>
+                <a :href="missionExportUrl(item.id)">Export</a>
+              </article>
+            </div>
+          </section>
+
+          <AuditLogPanel @error="(message) => (error = message)" />
+
+          <InvitationPanel :session="session" @error="(message) => (error = message)" />
 
           <section v-if="mission" class="mission-console">
             <div>
@@ -312,6 +414,17 @@ onMounted(loadBriefing);
                 <span>{{ workstream.owner }} · {{ workstream.status }}</span>
                 <strong>{{ workstream.title }}</strong>
                 <p>{{ workstream.description }}</p>
+                <small v-if="workstream.agentRuns.length">
+                  {{ workstream.agentRuns.at(-1)?.sessionId }} · ${{ workstream.agentRuns.at(-1)?.usage.estimatedCostUsd }}
+                </small>
+                <button
+                  v-if="workstream.status === 'failed' && !['queued', 'running'].includes(mission.status)"
+                  class="workstream-retry-btn"
+                  @click="handleWorkstreamRetry(workstream.id)"
+                  :disabled="retryingWorkstreamId === workstream.id"
+                >
+                  {{ retryingWorkstreamId === workstream.id ? "Retrying..." : "Retry Workstream" }}
+                </button>
               </article>
             </div>
             <div v-if="mission.boardBrief" class="brief-panel">
@@ -331,50 +444,11 @@ onMounted(loadBriefing);
       </section>
     </section>
 
-    <div v-if="showEditor" class="modal-overlay" @click.self="showEditor = false">
-      <div class="modal">
-        <header class="modal-header">
-          <h2>Agent Templates</h2>
-          <button class="close-btn" @click="showEditor = false">×</button>
-        </header>
-        <div class="modal-body">
-          <div v-if="editingTemplate" class="edit-form">
-            <label>ID</label>
-            <input v-model="editForm.id" disabled />
-            <label>Name</label>
-            <input v-model="editForm.name" />
-            <label>Title</label>
-            <input v-model="editForm.title" />
-            <label>Mission</label>
-            <textarea v-model="editForm.mission" rows="3" />
-            <label>Status</label>
-            <select v-model="editForm.status">
-              <option value="ready">Ready</option>
-              <option value="standby">Standby</option>
-              <option value="disabled">Disabled</option>
-            </select>
-            <label>Budget Limit (USD)</label>
-            <input v-model.number="editForm.budgetLimitUsd" type="number" step="0.01" />
-            <div class="form-actions">
-              <button class="save-btn" @click="saveTemplate" :disabled="savingTemplate">{{ savingTemplate ? "Saving..." : "Save" }}</button>
-              <button class="cancel-btn" @click="cancelEdit">Cancel</button>
-            </div>
-          </div>
-          <div v-else class="template-list">
-            <article v-for="t in templates" :key="t.id" class="template-item">
-              <div>
-                <strong>{{ t.name }}</strong>
-                <span>{{ t.title }}</span>
-                <small>{{ t.status }}</small>
-              </div>
-              <div class="template-actions">
-                <button @click="startEdit(t)">Edit</button>
-                <button class="delete-btn" @click="removeTemplate(t.id)">Delete</button>
-              </div>
-            </article>
-          </div>
-        </div>
-      </div>
-    </div>
+    <TemplateEditor
+      v-if="showEditor"
+      @close="showEditor = false"
+      @saved="loadBriefing"
+      @error="(message) => (error = message)"
+    />
   </main>
 </template>

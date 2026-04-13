@@ -86,8 +86,22 @@ python3 scripts/bootstrap_openclaw.py
 - Workstreams: 每个 mission 持久化 COO/CTO/CFO/CMO/SRE workstream 记录
 - Board Brief: 持久化高管摘要、建议、风险和来源
 - Cost/Risk: token usage、可配置成本估算费率、质量门和 founder approval 状态
+- Agent Templates: 在 workspace UI 中创建、编辑和删除角色模板
+- Founder Approval: 对 pending quality gates 批准或拒绝，并记录 review notes
+- Pricing Profiles: 数据库持久化 model/provider 费率，并在 agent turn 前检查预算
+- Mission Recovery: retry、abort、archive mission 控制
+- Mission History: status/search 筛选和 Markdown 导出
+- Dashboard Metrics: 通过 WebSocket 推送 realtime metrics
+- Org Chart: Vue Flow executive graph，点击节点进入编辑
+- Workstream Recovery: 无需重跑整个 mission 即可 retry failed workstreams
+- Audit Log: 记录 template edits、mission controls、approvals 和 workstream retries
+- Organization Scope: 本地 default organization，加上面向未来多用户的 FounderProfile model
+- Session Auth: founder bootstrap、sign-in、sign-out 和 organization-aware session API
+- Strict Auth Mode: 可通过 `OPC_REQUIRE_AUTH=true` 启用 admin/founder/operator/viewer 角色校验
+- PostgreSQL Path: 后端 driver/settings 支持和迁移指南
+- PostgreSQL Backups: 带保留清理的 pg_dump/pg_restore helper scripts
 - OpenClaw Gateway: 本机 Gateway 配置与健康状态
-- OpenClaw Mission Adapter: 后端创建 Mission、调用 OpenClaw agent、通过 WebSocket 推送日志并记录 token usage
+- OpenClaw Mission Adapter: 后端创建 Mission、运行独立 OpenClaw workstream agents、通过 WebSocket 推送日志并记录 token usage
 
 ## 项目结构
 
@@ -105,7 +119,5 @@ scripts/dev.sh         Local dev runner
 
 ## 下一步
 
-1. 增加 Agent Template 编辑能力，生成 OpenClaw 可消费的角色配置。
-2. 将 Mission adapter 从“单次 OpenClaw 调用 + workstream 表示”扩展为真正独立委派的多 workstream。
-3. 在 UI 中增加 founder approval 操作，让 pending approval gates 可以被批准或拒绝。
-4. 为不同 model/provider 增加更细的成本定价配置。
+1. 在多租户生产化前，执行 per-organization template id migration（策略见 `docs/template-id-strategy.md`）。
+2. 在生产环境为 PostgreSQL backup script 配置定时执行（cron/systemd）。

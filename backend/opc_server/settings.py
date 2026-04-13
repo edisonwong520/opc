@@ -6,8 +6,13 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env", override=True)
 
+
+def env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-opc-dev-key-change-me")
-DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
+DEBUG = env_bool("DJANGO_DEBUG")
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
@@ -73,14 +78,16 @@ if DB_ENGINE == "django.db.backends.sqlite3":
         }
     }
 else:
+    default_port = "5432" if "postgresql" in DB_ENGINE else "3306"
     DATABASES = {
         "default": {
             "ENGINE": DB_ENGINE,
             "NAME": os.getenv("DB_NAME", "opc"),
-            "USER": os.getenv("DB_USER", "root"),
+            "USER": os.getenv("DB_USER", "opc"),
             "PASSWORD": os.getenv("DB_PASSWORD", ""),
             "HOST": os.getenv("DB_HOST", "127.0.0.1"),
-            "PORT": os.getenv("DB_PORT", "3306"),
+            "PORT": os.getenv("DB_PORT", default_port),
+            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
         }
     }
 
@@ -104,6 +111,7 @@ CORS_ALLOWED_ORIGINS = [
     for origin in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
     if origin.strip()
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 OPENCLAW_GATEWAY_URL = os.getenv("OPENCLAW_GATEWAY_URL", "ws://127.0.0.1:7788")
 OPENCLAW_GATEWAY_AUTH_MODE = os.getenv("OPENCLAW_GATEWAY_AUTH_MODE", "token")
@@ -116,3 +124,4 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "")
 OPC_COST_INPUT_PER_1K_USD = os.getenv("OPC_COST_INPUT_PER_1K_USD", "0")
 OPC_COST_OUTPUT_PER_1K_USD = os.getenv("OPC_COST_OUTPUT_PER_1K_USD", "0")
+OPC_REQUIRE_AUTH = env_bool("OPC_REQUIRE_AUTH")
