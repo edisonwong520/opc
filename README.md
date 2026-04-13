@@ -8,6 +8,14 @@ CEO Desk 是一个面向 OpenClaw/NanoClaw 的多 Agent 编排管理桌面。它
 - Frontend: Vue 3, Vite, Tailwind CSS
 - Deploy: Docker Compose, Nginx static frontend, Django API backend
 
+## 协议与使用限制
+
+本项目代码随仓库中的 `LICENSE` 以 GNU Affero General Public License v3.0（AGPL-3.0）发布。
+
+**商业使用限制：未经作者事先书面授权，本项目不得用于商业用途。** 这包括但不限于将本项目或其修改版本用于商业 SaaS、付费托管、企业内部生产系统、商业咨询交付、闭源产品集成、销售或转授权。
+
+如需商业使用、闭源集成、私有部署授权或其他 AGPL-3.0 之外的授权，请先联系作者获得单独的商业许可。
+
 ## 快速启动
 
 ### 1. 后端
