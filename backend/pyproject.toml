@@ -1,0 +1,22 @@
+[project]
+name = "ceo-desk-backend"
+version = "0.1.0"
+description = "CEO Desk API for OpenClaw/NanoClaw multi-agent orchestration."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "daphne>=4.2.1",
+    "django>=6.0.3",
+    "django-cors-headers>=4.9.0",
+    "python-dotenv>=1.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-django>=4.12.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "ceo_desk_server.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
