@@ -1,10 +1,12 @@
 # OpenClaw Deployment
 
-本项目只支持 OpenClaw，不支持 NanoClaw 或其他 agent runtime。
+Language: English | [Chinese](openclaw-deployment.zh-CN.md)
 
-本文记录 2026-04-13 在当前开发机上的 OpenClaw 本地部署方式，并作为后续 CEO Desk 对接 OpenClaw Gateway 的基线。
+CEO Desk only supports OpenClaw. It does not support any other agent runtime.
 
-## 当前部署结果
+This document records the local OpenClaw deployment baseline for CEO Desk.
+
+## Current Deployment
 
 | Item | Value |
 | --- | --- |
@@ -21,12 +23,12 @@
 | Workspace | `~/.openclaw/workspace` |
 | Logs | `~/.openclaw/logs/gateway.log` and `/tmp/openclaw/openclaw-YYYY-MM-DD.log` |
 
-Gateway 已安装为 macOS LaunchAgent，并通过 `openclaw gateway status` 验证：
+The Gateway is installed as a macOS LaunchAgent and has been verified with `openclaw gateway status`:
 
 - service loaded
 - runtime running
 - listening on `127.0.0.1:7788`
-- RPC probe OK
+- RPC probe OK after warm-up
 
 ## Official References
 
@@ -37,7 +39,7 @@ Gateway 已安装为 macOS LaunchAgent，并通过 `openclaw gateway status` 验
 
 ## Install Commands
 
-本机已有 Node.js 24。官方文档要求 Node.js 22+，并推荐 Node.js 24。
+The current machine already has Node.js 24. OpenClaw requires Node.js 22+ and recommends Node.js 24.
 
 ```bash
 node -v
@@ -46,7 +48,7 @@ npm install -g openclaw@latest
 openclaw --version
 ```
 
-部署 Gateway：
+Deploy the Gateway:
 
 ```bash
 TOKEN="$(openssl rand -hex 24)"
@@ -68,12 +70,12 @@ openclaw onboard \
   --json
 ```
 
-说明：
+Notes:
 
-- `--auth-choice skip` 只部署 Gateway，不在非交互流程里配置模型 provider。
-- `--gateway-bind loopback` 只允许本机访问，适合当前开发阶段。
-- `--gateway-auth token` 会把 Gateway 保护起来；token 保存在本机 OpenClaw 配置中，不进入项目仓库。
-- `--skip-channels` 不配置 Telegram/Discord/WhatsApp 等 channel。CEO Desk 当前只需要 Gateway。
+- `--auth-choice skip` deploys the Gateway without configuring a model provider during onboarding.
+- `--gateway-bind loopback` keeps access local to the machine.
+- `--gateway-auth token` protects the Gateway. The token stays in local OpenClaw config and is never committed.
+- `--skip-channels` skips Telegram, Discord, WhatsApp, and similar channels. CEO Desk only needs the Gateway.
 
 ## Verify
 
@@ -83,16 +85,16 @@ openclaw health
 openclaw doctor
 ```
 
-预期：
+Expected:
 
-- `openclaw gateway status` 显示 `Runtime: running`
+- `openclaw gateway status` shows `Runtime: running`
 - `RPC probe: ok`
 - `Listening: 127.0.0.1:7788`
 
-当前 `doctor` 有两个非阻断提醒：
+Current non-blocking `doctor` notes:
 
-- Gateway 服务使用 nvm 下的 Node。未来 Node 版本升级后，可能需要重新安装 Gateway service。
-- bundled Discord voice dependency 未安装。当前未启用 Discord channel，不影响 CEO Desk 的 OpenClaw Gateway 对接。
+- The Gateway service uses Node from nvm. If Node is upgraded later, reinstall the Gateway service.
+- The bundled Discord voice dependency is not installed. Discord channels are not enabled, so this does not affect CEO Desk.
 
 ## Service Commands
 
@@ -106,7 +108,7 @@ openclaw logs
 
 ## CEO Desk Configuration
 
-后端通过 `OPENCLAW_GATEWAY_URL` 指向 OpenClaw Gateway：
+The backend points to OpenClaw Gateway through `OPENCLAW_GATEWAY_URL`:
 
 ```bash
 OPENCLAW_GATEWAY_URL=ws://127.0.0.1:7788
@@ -115,24 +117,24 @@ OPENCLAW_GATEWAY_TOKEN=<local-token>
 OPENCLAW_GATEWAY_PASSWORD=
 ```
 
-当前 Gateway 使用 token 登录，没有设置 password。访问 `http://localhost:7788/chat?session=main` 时，使用 `~/.openclaw/openclaw.json` 中的 `gateway.auth.token`。
+The current Gateway uses token auth and has no password. For `http://localhost:7788/chat?session=main`, use `gateway.auth.token` from `~/.openclaw/openclaw.json`.
 
-为了避免手动复制 token，可以同步到本项目未提交的 `.env` 文件：
+To avoid manual copying, sync the token into the local project `.env` files:
 
 ```bash
 python3 scripts/sync_openclaw_env.py
 ```
 
-该脚本会写入：
+The script writes:
 
 - `.env`
 - `backend/.env`
 
-这两个文件已被 `.gitignore` 忽略，不会提交真实 token。
+Both files are ignored by Git and must not be committed.
 
 ## Model Configuration
 
-OpenClaw 模型配置参考 `wanny` 的后端 `.env` 约定，使用 OpenAI-compatible 三元组：
+OpenClaw model configuration follows the `wanny` backend `.env` convention and uses an OpenAI-compatible triple:
 
 ```bash
 AI_BASE_URL=https://api.deepseek.com/v1
@@ -140,52 +142,48 @@ AI_API_KEY=sk-your-ai-key-here
 AI_MODEL=deepseek-chat
 ```
 
-当前开发机已从 `/Users/edison/code/python/wanny/backend/.env` 读取到：
+On this development machine, the bootstrap script can fill missing values from `/Users/edison/code/python/wanny/backend/.env`.
 
-- `AI_BASE_URL`
-- `AI_API_KEY`
-- `AI_MODEL`
-
-并配置为 OpenClaw provider：
+The script configures OpenClaw as:
 
 - provider id: `ceodesk`
 - default model: `ceodesk/<AI_MODEL>`
 - API adapter: `openai-completions`
 
-推荐用户只维护项目根目录 `.env`，然后运行：
+Recommended user flow:
 
 ```bash
 python3 scripts/bootstrap_openclaw.py
 ```
 
-脚本行为：
+Script behavior:
 
-- 如果没有安装 OpenClaw CLI，则执行 `npm install -g openclaw@latest`。
-- 如果没有 `~/.openclaw/openclaw.json`，则自动部署本机 OpenClaw Gateway。
-- 如果已经存在 OpenClaw 配置，则不会重新部署，只同步 Gateway auth 和模型配置。
-- 如果本机存在 `wanny/backend/.env` 且项目 `.env` 缺少 `AI_*`，会自动补齐缺失的模型配置。
-- 将 Gateway token 同步到 `.env` 和 `backend/.env`。
-- 将 `AI_*` 写入本机 OpenClaw 配置，供 launchd Gateway 服务使用。
-- 设置 OpenClaw 默认模型为 `ceodesk/<AI_MODEL>`。
+- If OpenClaw CLI is missing, it runs `npm install -g openclaw@latest`.
+- If `~/.openclaw/openclaw.json` is missing, it deploys a local OpenClaw Gateway.
+- If OpenClaw already exists, it does not redeploy. It only syncs Gateway auth and model configuration.
+- If `wanny/backend/.env` exists and this project `.env` is missing `AI_*`, it fills the missing model settings.
+- It syncs Gateway token into `.env` and `backend/.env`.
+- It writes `AI_*` into local OpenClaw config for the launchd Gateway service.
+- It sets the OpenClaw default model to `ceodesk/<AI_MODEL>`.
 
-验证模型：
+Verify the model:
 
 ```bash
 openclaw models status --json
 openclaw models list --provider ceodesk
 ```
 
-注意：模型 API key 会保存在本机 OpenClaw 配置目录中，不提交到 Git。不要把 `.env`、`backend/.env` 或 `~/.openclaw` 里的密钥复制进文档或 issue。
+Model API keys are stored in local OpenClaw config and local `.env` files. Do not copy `.env`, `backend/.env`, or `~/.openclaw` secrets into docs, issues, or commits.
 
-当前 CEO Desk 只展示 Gateway 配置和 MVP briefing。下一步接入时，应在后端新增 OpenClaw Gateway client/service，不要在 Django view 里直接拼 RPC 调用。
+## CEO Desk OpenClaw Integration
 
-建议后续对接顺序：
+The integration is implemented as:
 
-1. Gateway health probe: 已实现，见 `GET /api/desk/openclaw/health/`。
-2. Token handling: 已实现，`.env` 和 `backend/.env` 保存本机 token，Git 忽略真实密钥。
-3. Mission adapter: 已实现，`POST /api/desk/commands/` 会创建 Mission 并调用 `openclaw agent`。
-4. Streaming logs: 已实现，`ws://<host>/ws/missions/<mission_id>/logs/` 推送 MissionEvent。
-5. Cost and quality gates: 已实现基础版，Mission 持久化 token usage，并写入 gateway/model/result/cost 质量门。
+1. Gateway health probe: `GET /api/desk/openclaw/health/`
+2. Token handling: local `.env` and `backend/.env`, both ignored by Git
+3. Mission adapter: `POST /api/desk/commands/` creates a Mission and calls `openclaw agent`
+4. Streaming logs: `ws://<host>/ws/missions/<mission_id>/logs/`
+5. Cost and quality gates: Mission records token usage and gateway/model/result/cost gates
 
 ## CEO Desk OpenClaw API
 
@@ -195,12 +193,12 @@ openclaw models list --provider ceodesk
 curl http://127.0.0.1:8000/api/desk/openclaw/health/
 ```
 
-返回：
+Returns:
 
-- Gateway service 是否 running
-- RPC probe 是否 OK
-- 是否存在 pairing 限制
-- 当前默认模型 provider 是否可用
+- whether the Gateway service is running
+- whether RPC probe is OK
+- whether pairing is required for management RPCs
+- whether the default model provider is usable
 
 ### Create Mission
 
@@ -210,13 +208,13 @@ curl -X POST http://127.0.0.1:8000/api/desk/commands/ \
   -d '{"command":"Reply exactly: integration-ok"}'
 ```
 
-后端会：
+Backend behavior:
 
-1. 创建 `Mission`
-2. 初始化质量门
-3. 后台调用 `openclaw agent --session-id <id> --message <command> --json`
-4. 流式写入 `MissionEvent`
-5. 捕获 OpenClaw final response 和 token usage
+1. Create `Mission`
+2. Initialize quality gates
+3. Run `openclaw agent --session-id <id> --message <command> --json` in the background
+4. Write `MissionEvent` records
+5. Capture OpenClaw final response and token usage
 
 ### Mission Detail
 
@@ -224,17 +222,17 @@ curl -X POST http://127.0.0.1:8000/api/desk/commands/ \
 curl http://127.0.0.1:8000/api/desk/missions/<mission_id>/
 ```
 
-返回 mission 状态、result、events、quality gates 和 token usage。
+Returns mission status, result, events, quality gates, and token usage.
 
 ### Streaming Logs
 
-前端连接：
+The frontend connects to:
 
 ```text
 ws://127.0.0.1:8000/ws/missions/<mission_id>/logs/
 ```
 
-每条消息是一个 `MissionEvent` JSON：
+Each message is a `MissionEvent` JSON object:
 
 ```json
 {
@@ -253,11 +251,11 @@ ws://127.0.0.1:8000/ws/missions/<mission_id>/logs/
 curl http://127.0.0.1:8000/api/desk/openclaw/cost/?days=30
 ```
 
-OpenClaw Gateway 的 `usage-cost` RPC 在当前本机配置下可能因 pairing scope 返回 degraded；Mission 自身仍会从 `openclaw agent --json` 的 `agentMeta.usage` 捕获 input/output/total tokens。
+OpenClaw Gateway `usage-cost` may be degraded when the local Gateway pairing scope rejects management RPCs. Mission-level token usage is still captured from `openclaw agent --json` via `agentMeta.usage`.
 
 ## Reinstall Or Repair
 
-重新部署 service：
+Reinstall the service:
 
 ```bash
 openclaw gateway stop
@@ -266,10 +264,10 @@ openclaw gateway start
 openclaw gateway status
 ```
 
-运行自动修复：
+Run automatic repair:
 
 ```bash
 openclaw doctor --fix
 ```
 
-只有在需要 Discord voice 或迁移 Node runtime 时再运行 `doctor --fix`，当前 MVP 不强制需要。
+Run `doctor --fix` only when you need Discord voice dependencies or Node runtime migration. The MVP does not require it.

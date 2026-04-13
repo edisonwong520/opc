@@ -1,10 +1,10 @@
 # CEO Desk Backend
 
-Language: English | [Chinese](README.zh-CN.md)
+语言：[English](README.md) | 中文
 
-Django API for the CEO Desk MVP. It starts with a lightweight SQLite setup so local development does not depend on MySQL or Redis.
+CEO Desk MVP 的 Django API。默认使用轻量 SQLite，本地开发不依赖 MySQL 或 Redis。
 
-## Local Development
+## 本地开发
 
 ```bash
 cd backend
@@ -14,7 +14,7 @@ uv run python manage.py migrate
 uv run python manage.py runserver 0.0.0.0:8000
 ```
 
-Useful endpoints:
+常用 endpoints：
 
 - `GET /api/health/`
 - `GET /api/desk/briefing/`

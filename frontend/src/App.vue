@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from "vue";
 import { createCommand, fetchBriefing, fetchMission, missionLogUrl, type DeskBriefing, type Mission, type MissionEvent } from "./lib/api";
 
 const briefing = ref<DeskBriefing | null>(null);
-const command = ref("帮我评估 CEO Desk 的 MVP 交付计划，并给出本周行动清单。");
+const command = ref("Evaluate the CEO Desk MVP delivery plan and return this week's action list.");
 const mission = ref<Mission | null>(null);
 const liveEvents = ref<MissionEvent[]>([]);
 const loading = ref(true);
@@ -20,7 +20,7 @@ async function loadBriefing() {
     loading.value = true;
     briefing.value = await fetchBriefing();
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : "CEO Desk 暂时无法连接。";
+    error.value = caught instanceof Error ? caught.message : "CEO Desk is temporarily unreachable.";
   } finally {
     loading.value = false;
   }
@@ -37,7 +37,7 @@ async function submitCommand() {
     connectMissionSocket(mission.value.id);
     void pollMission(mission.value.id);
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : "指令规划失败。";
+    error.value = caught instanceof Error ? caught.message : "Command dispatch failed.";
   } finally {
     submitting.value = false;
   }
@@ -79,13 +79,13 @@ onMounted(loadBriefing);
       <aside class="command-rail">
         <p class="eyebrow">OpenClaw Executive OS</p>
         <h1>CEO Desk</h1>
-        <p class="lede">把一句战略指令交给一支 AI 高管团队，让 COO 拆解，CTO/CFO/CMO 并行推进，CEO 收口汇报。</p>
+        <p class="lede">Give one executive command to an AI leadership team. COO decomposes, CTO/CFO/CMO work in parallel, and CEO returns the board brief.</p>
 
         <form class="command-box" @submit.prevent="submitCommand">
           <label for="command">CEO Command</label>
           <textarea id="command" v-model="command" rows="7" />
           <button type="submit" :disabled="submitting">
-            {{ submitting ? "规划中..." : "分配给高管团队" }}
+            {{ submitting ? "Dispatching..." : "Assign to Executive Team" }}
           </button>
         </form>
 
@@ -102,7 +102,7 @@ onMounted(loadBriefing);
       </aside>
 
       <section class="board">
-        <div v-if="loading" class="notice">正在连接 CEO Desk API...</div>
+        <div v-if="loading" class="notice">Connecting to CEO Desk API...</div>
         <div v-else-if="error" class="notice error">{{ error }}</div>
 
         <template v-else-if="briefing">
@@ -191,7 +191,7 @@ onMounted(loadBriefing);
               <h2>{{ mission.status }}</h2>
               <p v-if="mission.resultText" class="result-text">{{ mission.resultText }}</p>
               <p v-else-if="mission.error" class="result-text error-text">{{ mission.error }}</p>
-              <p v-else class="result-text">OpenClaw 正在处理这条 CEO Command。</p>
+              <p v-else class="result-text">OpenClaw is processing this CEO Command.</p>
             </div>
             <div class="usage-grid">
               <span>{{ mission.usage.input }}</span>

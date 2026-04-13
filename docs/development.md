@@ -1,5 +1,7 @@
 # Development Guide
 
+Language: English | [Chinese](development.zh-CN.md)
+
 ## Requirements
 
 - Python 3.12+
@@ -43,6 +45,11 @@ Important variables:
 - `DJANGO_ALLOWED_HOSTS`: comma-separated host allowlist
 - `DJANGO_CORS_ALLOWED_ORIGINS`: frontend dev origins
 - `OPENCLAW_GATEWAY_URL`: OpenClaw gateway endpoint
+- `OPENCLAW_GATEWAY_AUTH_MODE`: Gateway auth mode, usually `token`
+- `OPENCLAW_GATEWAY_TOKEN`: local Gateway token, never commit this value
+- `AI_BASE_URL`: OpenAI-compatible model endpoint
+- `AI_API_KEY`: model API key, never commit this value
+- `AI_MODEL`: default model id used by OpenClaw bootstrap
 
 Frontend environment:
 

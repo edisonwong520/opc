@@ -1,24 +1,26 @@
 # CEO Desk
 
-CEO Desk 是一个面向 OpenClaw 的多 Agent 编排管理桌面。它把用户的一句战略指令交给一组预设的 AI 高管角色，由 CEO/COO/CTO/CFO/CMO/SRE 共同拆解、执行、质检和汇报。
+Language: English | [Chinese](README.zh-CN.md)
 
-当前仓库是 MVP 开发骨架，技术栈参考 `wanny`：
+CEO Desk is an OpenClaw-only multi-agent orchestration desk. It turns one executive command into coordinated work across a preset AI leadership team: CEO, COO, CTO, CFO, CMO, and SRE.
+
+This repository is the MVP scaffold. Its stack follows the local `wanny` project:
 
 - Backend: Django 6, Daphne, uv, SQLite-first
 - Frontend: Vue 3, Vite, Tailwind CSS
 - Deploy: Docker Compose, Nginx static frontend, Django API backend
 
-## 协议与使用限制
+## License And Use Restrictions
 
-本项目代码随仓库中的 `LICENSE` 以 GNU Affero General Public License v3.0（AGPL-3.0）发布。
+This project is released under the GNU Affero General Public License v3.0 (AGPL-3.0), as provided in `LICENSE`.
 
-**商业使用限制：未经作者事先书面授权，本项目不得用于商业用途。** 这包括但不限于将本项目或其修改版本用于商业 SaaS、付费托管、企业内部生产系统、商业咨询交付、闭源产品集成、销售或转授权。
+**Commercial use is not permitted without prior written authorization from the author.** This includes, but is not limited to, commercial SaaS, paid hosting, enterprise production use, commercial consulting delivery, closed-source product integration, resale, or sublicensing.
 
-如需商业使用、闭源集成、私有部署授权或其他 AGPL-3.0 之外的授权，请先联系作者获得单独的商业许可。
+For commercial use, closed-source integration, private deployment licensing, or any licensing outside AGPL-3.0, contact the author for a separate commercial license.
 
-## 快速启动
+## Quick Start
 
-### 1. 后端
+### 1. Backend
 
 ```bash
 cd backend
@@ -28,14 +30,14 @@ uv run python manage.py migrate
 uv run python manage.py runserver 0.0.0.0:8000
 ```
 
-检查 API：
+Check the API:
 
 ```bash
 curl http://127.0.0.1:8000/api/health/
 curl http://127.0.0.1:8000/api/desk/briefing/
 ```
 
-### 2. 前端
+### 2. Frontend
 
 ```bash
 cd frontend
@@ -43,15 +45,15 @@ npm install
 npm run dev
 ```
 
-打开 http://127.0.0.1:5173 。
+Open http://127.0.0.1:5173.
 
-### 3. 一键开发启动
+### 3. One-command Development
 
 ```bash
 ./scripts/dev.sh
 ```
 
-这个脚本会分别启动后端 `8000` 和前端 `5173`。
+This starts the backend on `8000` and the frontend on `5173`.
 
 ## Docker
 
@@ -60,32 +62,32 @@ cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
-打开 http://127.0.0.1:8080 。
+Open http://127.0.0.1:8080.
 
 ## OpenClaw
 
-本项目只支持 OpenClaw。当前本机部署记录、验证命令、常见维护命令见 [docs/openclaw-deployment.md](docs/openclaw-deployment.md)。
+CEO Desk only supports OpenClaw. Deployment notes, verification commands, and maintenance commands live in [docs/openclaw-deployment.md](docs/openclaw-deployment.md).
 
-一键准备 OpenClaw 和模型配置：
+Prepare OpenClaw and model configuration:
 
 ```bash
 cp .env.example .env
-# 填写 AI_BASE_URL、AI_API_KEY、AI_MODEL
+# Fill AI_BASE_URL, AI_API_KEY, and AI_MODEL.
 python3 scripts/bootstrap_openclaw.py
 ```
 
-脚本会复用已有 OpenClaw；如果本机还没有 OpenClaw，则自动安装 CLI、部署本机 Gateway，并按 `.env` 配置默认模型。
+The script reuses an existing OpenClaw installation. If OpenClaw is missing, it installs the CLI, deploys a local Gateway, and configures the default model from `.env`.
 
-## MVP 范围
+## MVP Scope
 
-- CEO Command: 输入单一战略指令
-- Executive Team: CEO/COO/CTO/CFO/CMO/SRE 角色模板
-- Mission Pipeline: Intake、Decomposition、Parallel Work、Quality Gate、Board Brief
-- Cost/Risk Placeholder: 预算、质量门、运行时配置占位
-- OpenClaw Gateway Placeholder: 后续接入实际 OpenClaw runtime
-- OpenClaw Mission Adapter: 后端可创建 Mission、调用 OpenClaw agent、通过 WebSocket 推送日志并记录 token usage
+- CEO Command: enter one executive command
+- Executive Team: CEO/COO/CTO/CFO/CMO/SRE role template
+- Mission Pipeline: Intake, Decomposition, Parallel Work, Quality Gate, Board Brief
+- Cost/Risk Placeholder: budget, quality gates, and runtime configuration placeholders
+- OpenClaw Gateway: local Gateway configuration and health status
+- OpenClaw Mission Adapter: backend creates missions, calls OpenClaw agents, streams logs over WebSocket, and records token usage
 
-## 项目结构
+## Project Structure
 
 ```text
 backend/
@@ -99,9 +101,9 @@ docs/                  Product and architecture docs
 scripts/dev.sh         Local dev runner
 ```
 
-## 下一步
+## Next Steps
 
-1. 把 `apps.desk.views` 中的静态角色模板迁移到数据库模型。
-2. 增加 Agent Template 编辑能力，生成 OpenClaw 可消费的角色配置。
-3. 接入 OpenClaw Gateway，启动真实 agent session。
-4. 加入任务状态持久化、执行日志、token 成本统计和质量门审批。
+1. Move static executive role templates into database-backed models.
+2. Add an Agent Template editor that produces OpenClaw-compatible role configuration.
+3. Expand the Mission adapter from single-turn agent calls to multi-workstream orchestration.
+4. Add persistent workstreams, richer execution logs, token cost estimates, and approval gates.
