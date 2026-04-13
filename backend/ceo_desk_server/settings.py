@@ -98,4 +98,4 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-OPENCLAW_GATEWAY_URL = os.getenv("OPENCLAW_GATEWAY_URL", "http://localhost:7788")
+OPENCLAW_GATEWAY_URL = os.getenv("OPENCLAW_GATEWAY_URL", "ws://127.0.0.1:7788")

@@ -62,6 +62,10 @@ docker compose up --build
 
 打开 http://127.0.0.1:8080 。
 
+## OpenClaw
+
+本项目只支持 OpenClaw。当前本机部署记录、验证命令、常见维护命令见 [docs/openclaw-deployment.md](docs/openclaw-deployment.md)。
+
 ## MVP 范围
 
 - CEO Command: 输入单一战略指令
