@@ -16,6 +16,10 @@ dist/
 .env
 backend/.env
 .openclaw-config.batch.json
+.openclaw-agent.batch.json
+
+# OpenClaw runtime
+.openclaw/
 
 # Runtime
 *.log
