@@ -13,6 +13,7 @@ ROOT_ENV = ROOT / ".env"
 BACKEND_ENV = ROOT / "backend" / ".env"
 OPENCLAW_CONFIG = Path.home() / ".openclaw" / "openclaw.json"
 OPENCLAW_WORKSPACE = Path.home() / ".openclaw" / "workspace"
+OPENCLAW_AGENT_DIR = Path.home() / ".openclaw" / "agents" / "opc"
 OPENCLAW_PROVIDER_ID = "opc"
 LEGACY_PROVIDER_ID = "ceo" + "desk"
 
@@ -150,6 +151,106 @@ def sync_gateway_env() -> None:
     print("Synced OpenClaw Gateway auth into .env and backend/.env.")
 
 
+def configure_opc_agent_profiles() -> None:
+    """Configure OPC agent profiles with workspace and tool policies."""
+    print("Configuring OPC agent profiles...")
+
+    preset_dir = ROOT / "openclaw"
+
+    # Define agent profiles with tool policies
+    agent_profiles = [
+        {
+            "id": "opc",
+            "workspace": str(ROOT),
+            "agentDir": str(OPENCLAW_AGENT_DIR / "agent"),
+            "tools": {"allow": ["read", "write", "edit", "apply_patch", "exec"]},
+        },
+        {
+            "id": "opc-dev",
+            "workspace": str(ROOT),
+            "agentDir": str(OPENCLAW_AGENT_DIR / "dev"),
+            "tools": {"allow": ["read", "write", "edit", "apply_patch", "exec"], "deny": ["browser", "message"]},
+        },
+        {
+            "id": "opc-qa",
+            "workspace": str(ROOT),
+            "agentDir": str(OPENCLAW_AGENT_DIR / "qa"),
+            "tools": {"allow": ["read", "exec"], "deny": ["write", "edit", "browser", "message"]},
+        },
+    ]
+
+    # Copy preset files for each agent profile
+    for profile in agent_profiles:
+        agent_dir = Path(profile["agentDir"])
+        agent_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy base config files
+        base_files = ["SOUL.md", "USER.md"]
+        for filename in base_files:
+            src = preset_dir / filename
+            dst = agent_dir / filename
+            if src.exists() and not dst.exists():
+                shutil.copy(src, dst)
+
+        # Copy role-specific AGENTS.md if available
+        role_id = profile["id"].replace("opc-", "") if profile["id"].startswith("opc-") else ""
+        if role_id and role_id != "opc":
+            role_agents = preset_dir / "agents" / role_id / "AGENTS.md"
+            dst_agents = agent_dir / "AGENTS.md"
+            if role_agents.exists() and not dst_agents.exists():
+                shutil.copy(role_agents, dst_agents)
+                print(f"Copied AGENTS.md for {profile['id']}")
+        else:
+            src_agents = preset_dir / "AGENTS.md"
+            dst_agents = agent_dir / "AGENTS.md"
+            if src_agents.exists() and not dst_agents.exists():
+                shutil.copy(src_agents, dst_agents)
+                print(f"Copied AGENTS.md to {agent_dir}")
+
+    # Configure agents in openclaw.json
+    batch = [{"path": "agents.list", "value": agent_profiles}]
+    batch_path = ROOT / ".openclaw-agents.batch.json"
+    batch_path.write_text(json.dumps(batch, ensure_ascii=False, indent=2))
+    try:
+        run(["openclaw", "config", "set", "--batch-file", str(batch_path)])
+    finally:
+        batch_path.unlink(missing_ok=True)
+
+    print(f"OPC agent profiles configured: {[p['id'] for p in agent_profiles]}")
+
+
+def approve_pending_pairing() -> None:
+    """Approve pending device pairing requests for Gateway access."""
+    print("Checking for pending pairing requests...")
+
+    # List pending requests
+    result = output(["openclaw", "devices", "list", "--json"], check=False)
+
+    if not result or "pending" not in result.lower():
+        print("No pairing issues detected.")
+        return
+
+    try:
+        data = json.loads(result)
+        pending = data.get("pending", [])
+        if not pending:
+            print("No pending pairing requests.")
+            return
+
+        for request in pending:
+            request_id = request.get("id")
+            if request_id:
+                print(f"Approving pairing request: {request_id}")
+                run(["openclaw", "devices", "approve", request_id], check=False)
+                print(f"Approved: {request_id}")
+
+        print("All pending pairing requests approved.")
+    except json.JSONDecodeError:
+        # Fallback: try approve --latest
+        print("Attempting to approve latest pending request...")
+        run(["openclaw", "devices", "approve", "--latest"], check=False)
+
+
 def configure_model(values: dict[str, str]) -> None:
     base_url = required(values, "AI_BASE_URL")
     api_key = required(values, "AI_API_KEY")
@@ -210,13 +311,18 @@ def main() -> None:
     install_openclaw_if_missing()
     deploy_gateway_if_missing()
     sync_gateway_env()
+    configure_opc_agent_profiles()
     values = load_env()
     configure_model(values)
     run(["openclaw", "gateway", "restart"], check=False)
     wait_for_gateway()
+    approve_pending_pairing()
     run(["openclaw", "gateway", "status"], check=False)
     run(["openclaw", "models", "status", "--json"], check=False)
-    print("OpenClaw is ready for OPC.")
+    run(["openclaw", "devices", "list"], check=False)
+    print("\nOpenClaw is ready for OPC execution system.")
+    print(f"OPC agent workspace: {ROOT}")
+    print(f"OPC agent profiles: opc, opc-dev, opc-qa")
 
 
 if __name__ == "__main__":

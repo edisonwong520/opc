@@ -175,6 +175,114 @@ openclaw models list --provider opc
 
 Model API keys are stored in local OpenClaw config and local `.env` files. Do not copy `.env`, `backend/.env`, or `~/.openclaw` secrets into docs, issues, or commits.
 
+## Gateway Pairing
+
+When using Gateway mode, OpenClaw requires device pairing for management RPCs. If pairing is pending, agent connections will fail with `gateway connect failed: pairing required` and fall back to embedded mode.
+
+### Symptoms
+
+- `openclaw gateway status` shows `pairing required`
+- Agent runs fail with `gateway connect failed: pairing required`
+- `openclaw gateway usage-cost` returns permission errors
+
+### Resolution
+
+Approve pending pairing requests:
+
+```bash
+# List pending requests
+openclaw devices list --json
+
+# Approve a specific request
+openclaw devices approve <request-id>
+
+# Or approve the latest pending request
+openclaw devices approve --latest
+```
+
+### Automatic Approval
+
+The bootstrap script includes automatic pairing approval:
+
+```bash
+python3 scripts/bootstrap_openclaw.py
+```
+
+The script will:
+1. Check for pending pairing requests
+2. Automatically approve them
+3. Verify Gateway connectivity
+
+If you prefer manual approval, check `openclaw devices list` before running agents.
+
+## OPC Agent Profile
+
+OpenClaw agents need access to project files. The workspace is configured via the OPC agent profile, not subprocess cwd.
+
+### Preset Configuration Files
+
+OPC includes preset agent configuration files in `openclaw/` directory:
+
+| File | Purpose |
+| --- | --- |
+| `AGENTS.md` | Agent identity, capabilities, output format |
+| `SOUL.md` | Agent personality, communication style |
+| `USER.md` | Founder profile, decision criteria |
+
+The bootstrap script copies these files to `~/.openclaw/agents/opc/agent/` during setup.
+
+### Configuration
+
+The bootstrap script configures the OPC agent profile:
+
+- Agent ID: `opc`
+- Workspace: `<project-root>` (e.g., `/Users/edison/code/python/opc`)
+- Agent directory: `~/.openclaw/agents/opc/agent`
+
+This allows agents to read project files like `README.md`, `docs/`, `backend/` etc.
+
+### Verify
+
+```bash
+openclaw config get agents.list
+ls ~/.openclaw/agents/opc/agent/
+```
+
+Expected output includes:
+
+```json
+[
+  {
+    "id": "opc",
+    "workspace": "/Users/edison/code/python/opc",
+    "agentDir": "~/.openclaw/agents/opc/agent"
+  }
+]
+```
+
+And agent directory files:
+
+```
+AGENTS.md  SOUL.md  USER.md
+```
+
+### Usage
+
+Backend calls use `--agent opc` to ensure correct workspace:
+
+```python
+command = [
+    "openclaw",
+    "agent",
+    "--agent",
+    "opc",
+    "--session-id",
+    session_id,
+    "--message",
+    prompt,
+]
+```
+
 ## OPC OpenClaw Integration
 
 The integration is implemented as:

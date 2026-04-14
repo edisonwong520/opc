@@ -12,6 +12,7 @@ from django.conf import settings
 from django.db import close_old_connections
 from django.utils import timezone
 
+from opc_server.logger import mission_logger, openclaw_logger
 from .models import AgentRun, AgentTemplate, ApprovalDecision, BoardBrief, Mission, MissionEvent, PricingProfile, QualityGate, Workstream
 
 
@@ -33,7 +34,8 @@ def _base_env() -> dict[str, str]:
 
 
 def _run_openclaw(args: list[str], timeout: int = 30) -> subprocess.CompletedProcess:
-    return subprocess.run(
+    openclaw_logger.debug(f"Running: openclaw {' '.join(args)}")
+    result = subprocess.run(
         ["openclaw", *args],
         cwd=str(settings.BASE_DIR.parent),
         env=_base_env(),
@@ -43,15 +45,40 @@ def _run_openclaw(args: list[str], timeout: int = 30) -> subprocess.CompletedPro
         timeout=timeout,
         check=False,
     )
+    openclaw_logger.debug(f"Exit code: {result.returncode}")
+    return result
 
 
 def _json_from_output(output: str) -> dict[str, Any]:
+    """Parse JSON from OpenClaw output. Handles pretty-printed and multi-line JSON."""
+    # Try to find and parse the complete JSON object
+    # OpenClaw may output pretty-printed JSON with result/payloads or meta structure
     start = output.find("{")
     if start < 0:
         return {}
+
+    # Extract from first { and try to parse
+    # Use a more robust approach for multi-line JSON
+    json_str = output[start:]
     try:
-        return json.loads(output[start:])
+        return json.loads(json_str)
     except json.JSONDecodeError:
+        # If the full output doesn't parse, try to find the last complete JSON object
+        # by looking for balanced braces
+        depth = 0
+        json_start = start
+        for i, char in enumerate(output[start:], start=start):
+            if char == "{":
+                if depth == 0:
+                    json_start = i
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(output[json_start:i+1])
+                    except json.JSONDecodeError:
+                        continue
         return {}
 
 
@@ -263,13 +290,16 @@ def serialize_mission(mission: Mission, *, include_events: bool = False) -> dict
 
 
 def start_mission(mission: Mission) -> None:
+    mission_logger.info(f"Starting mission {mission.id}: {mission.command[:100]}...")
     thread = threading.Thread(target=_run_mission, args=(str(mission.id),), daemon=True)
     thread.start()
 
 
 def retry_workstream(workstream: Workstream) -> AgentRun:
     mission = workstream.mission
+    mission_logger.info(f"Retrying workstream {workstream.id} ({workstream.owner}) for mission {mission.id}")
     if mission.status in [Mission.Status.QUEUED, Mission.Status.RUNNING]:
+        mission_logger.warning(f"Cannot retry workstream: mission {mission.id} is running")
         raise ValueError("Running missions cannot retry individual workstreams.")
 
     context = _workstream_context(list(mission.workstreams.exclude(id=workstream.id)))
@@ -329,18 +359,33 @@ def _set_gate(mission: Mission, name: str, status: str, details: str = "") -> No
 
 
 def _ensure_workstreams(mission: Mission) -> None:
+    """Ensure workstreams for all OPC roles across decision → execution → review phases."""
+    # Phase structure via sort_order:
+    # - Phase 1 (Decision): 10-20 — COO, PM (product tasks)
+    # - Phase 2 (Execution): 30-40 — Dev, QA
+    # - Phase 3 (Review): 50-90 — CTO, CFO, CMO, SRE, Legal
     definitions = [
-        ("coo", "Mission decomposition", "Define workstreams, acceptance criteria, and reporting format."),
-        ("cto", "Technical review", "Assess technical path, implementation risk, and engineering quality."),
-        ("cfo", "Cost review", "Estimate token/API spend, budget risk, and return on effort."),
-        ("cmo", "Market review", "Assess positioning, user value, and go-to-market implications."),
-        ("sre", "Reliability review", "Check deployment, monitoring, rollback, and operational safety."),
+        # Phase 1: Decision Layer
+        ("coo", "Mission decomposition", "Define workstreams, acceptance criteria, and execution plan.", 10),
+        ("pm", "Product requirements", "Define user stories, acceptance criteria, and priority (if product task).", 15),
+        # Phase 2: Execution Layer
+        ("dev", "Code execution", "Write/modify code, fix bugs, implement features.", 30),
+        ("qa", "Test validation", "Run tests, verify changes, check coverage.", 40),
+        # Phase 3: Review Layer
+        ("cto", "Technical review", "Assess code quality, architecture, and technical debt.", 50),
+        ("cfo", "Cost review", "Estimate token/API spend, budget risk, and ROI.", 60),
+        ("cmo", "Market review", "Assess positioning, user value, and GTM implications.", 70),
+        ("sre", "Reliability review", "Check deployment, monitoring, rollback, and operational safety.", 80),
+        ("legal", "Compliance review", "Check license compatibility, AGPL-3.0 restrictions, and privacy.", 90),
     ]
     templates = {
         template.id: template
-        for template in AgentTemplate.objects.filter(id__in=[item[0] for item in definitions], organization=mission.organization)
+        for template in AgentTemplate.objects.filter(
+            id__in=[item[0] for item in definitions],
+            organization=mission.organization
+        )
     }
-    for index, (agent_id, title, description) in enumerate(definitions, start=1):
+    for agent_id, title, description, sort_order in definitions:
         template = templates.get(agent_id)
         Workstream.objects.get_or_create(
             mission=mission,
@@ -349,7 +394,7 @@ def _ensure_workstreams(mission: Mission) -> None:
             defaults={
                 "agent_template": template,
                 "description": description,
-                "sort_order": index * 10,
+                "sort_order": sort_order,
             },
         )
 
@@ -385,17 +430,37 @@ def _estimate_cost(input_tokens: int, output_tokens: int, model_preference: str 
 
 
 def _result_text(data: dict[str, Any]) -> str:
+    """Extract result text from OpenClaw response."""
+    # Try meta.finalAssistantVisibleText first (older format)
     result_text = data.get("meta", {}).get("finalAssistantVisibleText", "")
     if result_text:
         return result_text
-    payloads = data.get("payloads") or []
-    return "\n".join(item.get("text", "") for item in payloads if item.get("text"))
+
+    # Try nested result.payloads (newer format)
+    result_obj = data.get("result", {})
+    payloads = result_obj.get("payloads") or data.get("payloads") or []
+    texts = [item.get("text", "") for item in payloads if item.get("text")]
+    if texts:
+        return "\n".join(texts)
+
+    # Try summary or message field
+    summary = data.get("summary", "") or data.get("message", "")
+    if summary:
+        return summary
+
+    return ""
 
 
 def _usage(data: dict[str, Any]) -> dict[str, int]:
+    """Extract token usage from OpenClaw response."""
+    # Try meta.agentMeta.usage first
     raw = data.get("meta", {}).get("agentMeta", {}).get("usage", {})
-    input_tokens = int(raw.get("input") or 0)
-    output_tokens = int(raw.get("output") or 0)
+    # Also try nested result.usage
+    if not raw:
+        raw = data.get("result", {}).get("usage", {}) or data.get("usage", {})
+
+    input_tokens = int(raw.get("input") or raw.get("promptTokens") or 0)
+    output_tokens = int(raw.get("output") or raw.get("completionTokens") or 0)
     return {
         "input": input_tokens,
         "output": output_tokens,
@@ -409,22 +474,120 @@ def _workstream_session_id(mission: Mission, workstream: Workstream) -> str:
 
 
 def _workstream_prompt(workstream: Workstream, context: str = "") -> str:
+    """Generate role-specific prompt for workstream execution."""
     mission = workstream.mission
     template = workstream.agent_template
+    role_id = workstream.agent_template_id or workstream.owner.lower()
     role = f"{workstream.owner} - {workstream.title}"
     role_mission = template.mission if template else workstream.description
     tools = ", ".join(template.tools) if template and template.tools else "none declared"
+
+    # Base prompt parts
     parts = [
         f"You are the {role} in OPC.",
         f"Role mission: {role_mission}",
-        f"Available role tools: {tools}",
         f"Founder command: {mission.command}",
-        f"Workstream objective: {workstream.description}",
     ]
+
+    # Role-specific instructions
+    role_instructions = _role_specific_instructions(role_id, mission)
+    if role_instructions:
+        parts.append(role_instructions)
+
+    # Tools and context
+    parts.append(f"Available role tools: {tools}")
+    parts.append(f"Workstream objective: {workstream.description}")
+
     if context:
         parts.append(f"Prior workstream context:\n{context}")
-    parts.append("Return a concise executive workstream result with decisions, risks, and next actions.")
+
+    # Output format based on role
+    if role_id in ["dev", "qa"]:
+        parts.append("Report file paths, changes made, and verification status.")
+    else:
+        parts.append("Return concise executive workstream result with decisions (✅/🚨), risks, and actions.")
+
     return "\n\n".join(parts)
+
+
+def _role_specific_instructions(role_id: str, mission: Mission) -> str:
+    """Return role-specific execution instructions."""
+    instructions = {
+        "coo": """
+## COO Execution Protocol
+1. Decompose the mission into concrete workstreams
+2. Define dependencies and execution order
+3. Identify which roles should participate
+4. Set acceptance criteria for each workstream
+""",
+        "pm": """
+## PM Execution Protocol
+1. Define user stories and acceptance criteria
+2. Rank priorities (P0, P1, P2)
+3. Identify edge cases and error scenarios
+4. Note any UX or workflow considerations
+""",
+        "dev": """
+## Dev Execution Protocol
+1. Read relevant files to understand context
+2. Check GEMINI.md for coding conventions
+3. Make minimal, targeted changes
+4. Run syntax/build check locally
+5. Report: files changed (path:line), diff summary, verification status
+
+**Safety Rules:**
+- Never delete files without explicit instruction
+- Never modify settings.py or .env
+- Run verification before reporting success
+""",
+        "qa": """
+## QA Execution Protocol
+1. Identify test files for changed components
+2. Run relevant tests: `uv run pytest tests/...` or `npm run test`
+3. Report pass/fail with coverage notes
+4. Flag regressions or missing test coverage
+
+**Commands:**
+- Backend: `uv run pytest tests/test_X.py -v`
+- Frontend: `npm run build && npm run typecheck`
+""",
+        "cto": """
+## CTO Review Protocol
+1. Assess code quality, patterns, and technical debt
+2. Check security implications (OWASP)
+3. Evaluate architecture and maintainability
+4. Flag any concerns with severity level
+""",
+        "cfo": """
+## CFO Review Protocol
+1. Estimate token/API spend for this mission
+2. Calculate ROI and effort vs. value
+3. Identify budget risks and cost optimizations
+4. Suggest spend thresholds if applicable
+""",
+        "cmo": """
+## CMO Review Protocol
+1. Assess market positioning and user value
+2. Identify competitive implications
+3. Evaluate GTM timing and messaging
+4. Flag any brand or perception risks
+""",
+        "sre": """
+## SRE Review Protocol
+1. Check deployment safety and rollback paths
+2. Assess monitoring and alerting coverage
+3. Evaluate operational complexity
+4. Identify any availability or data risks
+""",
+        "legal": """
+## Legal Review Protocol
+1. Check license compatibility (AGPL-3.0 restrictions)
+2. Assess privacy and data handling compliance
+3. Identify IP or trademark risks
+4. Flag any regulatory concerns
+""",
+    }
+    return instructions.get(role_id, "")
 
 
 def _mission_cost_so_far(mission: Mission) -> Decimal:
@@ -460,9 +623,21 @@ def _fail_workstream_for_budget(workstream: Workstream, budget_limit: Decimal, s
     return agent_run
 
 
+def _agent_profile_for_role(role_id: str) -> str:
+    """Return the OpenClaw agent profile ID for a given role."""
+    # Execution roles use specialized profiles with tool restrictions
+    # Decision and review roles use the default opc profile
+    role_profiles = {
+        "dev": "opc-dev",
+        "qa": "opc-qa",
+    }
+    return role_profiles.get(role_id.lower(), "opc")
+
+
 def _run_agent_turn(workstream: Workstream, context: str = "") -> AgentRun:
     mission = workstream.mission
     if Mission.objects.filter(id=mission.id, abort_requested=True).exists():
+        mission_logger.warning(f"Mission {mission.id} abort requested, stopping agent turn")
         raise RuntimeError("Mission abort requested.")
     session_id = _workstream_session_id(mission, workstream)
     budget_limit = _budget_limit(workstream)
@@ -488,6 +663,8 @@ def _run_agent_turn(workstream: Workstream, context: str = "") -> AgentRun:
     command = [
         "openclaw",
         "agent",
+        "--agent",
+        _agent_profile_for_role(workstream.agent_template_id or workstream.owner.lower()),
         "--session-id",
         session_id,
         "--message",
@@ -524,6 +701,7 @@ def _run_agent_turn(workstream: Workstream, context: str = "") -> AgentRun:
     output = "".join(output_parts)
     data = _json_from_output(output)
     usage = _usage(data)
+    openclaw_logger.info(f"Agent turn completed: session={session_id}, return_code={return_code}, tokens={usage['total']}")
 
     agent_run = AgentRun.objects.get(id=agent_run.id)
     workstream = Workstream.objects.select_related("mission").get(id=workstream.id)
@@ -637,6 +815,7 @@ def _run_mission(mission_id: str) -> None:
         _set_gate(mission, "model-provider", QualityGate.Status.FAILED, json.dumps(models, ensure_ascii=False))
 
     try:
+        # Phase 1: Decision Layer (sequential)
         coo = _workstream_for_role(mission, "coo", "Mission decomposition")
         coo_run = _run_agent_turn(coo)
         coo = Workstream.objects.get(id=coo.id)
@@ -645,27 +824,45 @@ def _run_mission(mission_id: str) -> None:
         if Mission.objects.filter(id=mission_id, abort_requested=True).exists():
             raise InterruptedError("Mission abort requested.")
 
-        parallel_workstreams = list(
+        pm = _workstream_for_role(mission, "pm", "Product requirements")
+        pm_run = _run_agent_turn(pm, _workstream_context([coo]))
+        pm = Workstream.objects.get(id=pm.id)
+        if pm_run.status == AgentRun.Status.FAILED:
+            mission_logger.warning(f"PM workstream failed: {pm_run.error}")
+
+        # Phase 2: Execution Layer (sequential)
+        decision_context = _workstream_context([coo, pm])
+        dev = _workstream_for_role(mission, "dev", "Code execution")
+        dev_run = _run_agent_turn(dev, decision_context)
+        dev = Workstream.objects.get(id=dev.id)
+        if dev_run.status == AgentRun.Status.FAILED:
+            raise RuntimeError(dev_run.error or "Dev workstream failed.")
+        if Mission.objects.filter(id=mission_id, abort_requested=True).exists():
+            raise InterruptedError("Mission abort requested.")
+
+        execution_context = _workstream_context([coo, pm, dev])
+        qa = _workstream_for_role(mission, "qa", "Test validation")
+        qa_run = _run_agent_turn(qa, execution_context)
+        qa = Workstream.objects.get(id=qa.id)
+        if qa_run.status == AgentRun.Status.FAILED:
+            mission_logger.warning(f"QA workstream failed: {qa_run.error}")
+
+        # Phase 3: Review Layer (parallel)
+        review_workstreams = list(
             Workstream.objects.select_related("mission", "agent_template").filter(
                 mission=mission,
-                title__in=["Technical review", "Cost review", "Market review"],
+                title__in=["Technical review", "Cost review", "Market review", "Reliability review", "Compliance review"],
             )
         )
-        parallel_context = _workstream_context([coo])
-        with ThreadPoolExecutor(max_workers=max(len(parallel_workstreams), 1)) as executor:
-            futures = [executor.submit(_run_workstream_id, workstream.id, parallel_context) for workstream in parallel_workstreams]
+        review_context = _workstream_context([coo, pm, dev, qa])
+        with ThreadPoolExecutor(max_workers=max(len(review_workstreams), 1)) as executor:
+            futures = [executor.submit(_run_workstream_id, workstream.id, review_context) for workstream in review_workstreams]
             for future in as_completed(futures):
                 agent_run = future.result()
                 if agent_run.status == AgentRun.Status.FAILED:
                     raise RuntimeError(agent_run.error or f"{agent_run.session_id} failed.")
         if Mission.objects.filter(id=mission_id, abort_requested=True).exists():
             raise InterruptedError("Mission abort requested.")
-
-        completed_context = _workstream_context(list(Workstream.objects.filter(mission=mission).exclude(agent_template_id="sre")))
-        sre = _workstream_for_role(mission, "sre", "Reliability review")
-        sre_run = _run_agent_turn(sre, completed_context)
-        if sre_run.status == AgentRun.Status.FAILED:
-            raise RuntimeError(sre_run.error or "SRE workstream failed.")
 
         mission = Mission.objects.get(id=mission_id)
         mission.status = Mission.Status.SUCCEEDED
@@ -689,6 +886,7 @@ def _run_mission(mission_id: str) -> None:
         _set_gate(mission, "founder-approval", QualityGate.Status.PENDING, "Awaiting founder review before follow-up execution.")
     except Exception as exc:
         mission = Mission.objects.get(id=mission_id)
+        mission_logger.error(f"Mission {mission_id} failed: {exc}", exc_info=True)
         mission.status = Mission.Status.ABORTED if isinstance(exc, InterruptedError) or mission.abort_requested else Mission.Status.FAILED
         mission.error = str(exc)
         mission.finished_at = timezone.now()
@@ -701,4 +899,5 @@ def _run_mission(mission_id: str) -> None:
     mission.save()
     if mission.status == Mission.Status.SUCCEEDED:
         _create_board_brief(mission, mission.result_text)
+    mission_logger.info(f"Mission {mission_id} finished: status={mission.status}, tokens={mission.total_tokens}, cost=${mission.estimated_cost_usd}")
     create_event(mission, f"Mission {mission.status}.", event_type="status", payload=serialize_mission(mission))

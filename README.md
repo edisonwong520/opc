@@ -14,9 +14,9 @@ This repository is the MVP scaffold. Its stack follows the local `wanny` project
 
 This project is released under the GNU Affero General Public License v3.0 (AGPL-3.0), as provided in `LICENSE`.
 
-**Commercial use is not permitted without prior written authorization from the author.** This includes, but is not limited to, commercial SaaS, paid hosting, enterprise production use, commercial consulting delivery, closed-source product integration, resale, or sublicensing.
+**Commercial use is not permitted without a paid license.** Personal use is free. For SaaS, enterprise, or commercial deployment, purchase a $99/yr license at: [Buy Commercial License](/docs/licensing/README.md)
 
-For commercial use, closed-source integration, private deployment licensing, or any licensing outside AGPL-3.0, contact the author for a separate commercial license.
+See full terms and trademark disclaimer in [docs/licensing/README.md](/docs/licensing/README.md).
 
 ## Quick Start
 

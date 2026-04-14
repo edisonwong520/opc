@@ -9,6 +9,7 @@
 - 本地数据库默认使用 SQLite；除非任务明确要求，不要切换到 PostgreSQL 或其他数据库。
 - 配置读取优先通过 Django settings 与 `.env`，禁止硬编码 API Key、Gateway token、数据库密码等敏感信息。
 - 后端业务时间应使用 Django timezone API，避免直接使用 naive datetime。
+- **日志规范**：必须使用 `opc_server.logger` 模块统一封装的 logger，禁止直接 `import logging` 或创建独立 logger 实例。
 
 ## 2. OpenClaw 集成边界
 
@@ -50,3 +51,29 @@ cd backend
 uv run python manage.py migrate
 curl http://127.0.0.1:8000/api/opc/openclaw/health/
 ```
+
+## 6. 日志使用规范
+
+- 必须使用 `opc_server.logger` 模块统一封装的 logger。
+- 导入方式：
+
+```python
+from opc_server.logger import get_logger, app_logger, mission_logger, openclaw_logger
+
+# 模块专用 logger
+logger = get_logger(__name__)
+
+# 或使用预配置 logger
+app_logger.info("Application event")
+mission_logger.info("Mission started")
+openclaw_logger.debug("OpenClaw command")
+```
+
+- 日志级别使用指南：
+  - `DEBUG`: 详细调试信息，如 OpenClaw 命令参数
+  - `INFO`: 正常业务事件，如用户登录、任务创建、任务完成
+  - `WARNING`: 异常但可恢复的情况，如登录失败、任务终止请求
+  - `ERROR`: 错误需要关注，如任务失败、OpenClaw 连接问题（配合 `exc_info=True`）
+- 禁止直接 `import logging` 或创建独立 logger 实例。
+- 日志格式：`%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s`
+- 输出示例：`2026-04-14 12:00:00 [INFO] opc.mission:42: Mission started`

@@ -12,6 +12,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from opc_server.logger import app_logger
 from .models import AgentTemplate, ApprovalDecision, AuditLog, FounderProfile, Invitation, Mission, Organization, QualityGate, Workstream
 from .openclaw import (
     dashboard_metrics,
@@ -154,9 +155,11 @@ def auth_login(request):
 
     user = authenticate(request, username=username, password=password)
     if user is None:
+        app_logger.warning(f"Login failed for username: {username}")
         return JsonResponse({"error": "Invalid credentials."}, status=401)
 
     login(request, user)
+    app_logger.info(f"User logged in: {username}")
     organization = _organization_for_request(request)
     FounderProfile.objects.get_or_create(user=user, defaults={"organization": organization, "role": FounderProfile.Role.FOUNDER})
     _audit(request, "auth.login", "User", str(user.id))
@@ -194,6 +197,7 @@ def auth_bootstrap(request):
     if len(password) < 8:
         return JsonResponse({"error": "Password must be at least 8 characters."}, status=400)
 
+    app_logger.info(f"Bootstrapping first user: {username}, organization: {organization_name}")
     user = User.objects.create_user(username=username, password=password)
     organization, _ = Organization.objects.get_or_create(slug="default", defaults={"name": organization_name})
     FounderProfile.objects.create(user=user, organization=organization, role=FounderProfile.Role.ADMIN)
@@ -245,6 +249,7 @@ def create_command(request):
 
     organization = _organization_for_request(request)
     session_id = str(payload.get("sessionId") or f"opc-{uuid.uuid4().hex[:10]}")
+    app_logger.info(f"Creating mission: session={session_id}, command={command[:50]}...")
     mission = Mission.objects.create(
         organization=organization,
         command=command,

@@ -167,6 +167,114 @@ openclaw models list --provider opc
 
 不要把 `.env`、`backend/.env` 或 `~/.openclaw` 中的密钥复制进文档、issue 或 commit。
 
+## Gateway Pairing
+
+使用 Gateway 模式时，OpenClaw 需要 device pairing 才能执行管理 RPC。如果 pairing 处于 pending 状态，agent 连接会失败并显示 `gateway connect failed: pairing required`，然后 fallback 到 embedded 模式。
+
+### 症状
+
+- `openclaw gateway status` 显示 `pairing required`
+- Agent 执行失败并显示 `gateway connect failed: pairing required`
+- `openclaw gateway usage-cost` 返回权限错误
+
+### 解决方案
+
+批准 pending pairing 请求：
+
+```bash
+# 列出 pending 请求
+openclaw devices list --json
+
+# 批准特定请求
+openclaw devices approve <request-id>
+
+# 或批准最新的 pending 请求
+openclaw devices approve --latest
+```
+
+### 自动批准
+
+bootstrap 脚本包含自动 pairing 批准：
+
+```bash
+python3 scripts/bootstrap_openclaw.py
+```
+
+脚本会：
+1. 检查 pending pairing 请求
+2. 自动批准它们
+3. 验证 Gateway 连接
+
+如果希望手动批准，请在执行 agent 前检查 `openclaw devices list`。
+
+## OPC Agent Profile
+
+OpenClaw agents 需要访问项目文件。workspace 通过 OPC agent profile 配置，而非 subprocess cwd。
+
+### 预设配置文件
+
+OPC 在 `openclaw/` 目录包含预设的 agent 配置文件：
+
+| 文件 | 用途 |
+| --- | --- |
+| `AGENTS.md` | Agent 身份、能力、输出格式 |
+| `SOUL.md` | Agent 人格、沟通风格 |
+| `USER.md` | 创始人画像、决策标准 |
+
+bootstrap 脚本会在配置时将这些文件复制到 `~/.openclaw/agents/opc/agent/`。
+
+### 配置
+
+bootstrap 脚本配置 OPC agent profile：
+
+- Agent ID: `opc`
+- Workspace: `<project-root>` (例如 `/Users/edison/code/python/opc`)
+- Agent directory: `~/.openclaw/agents/opc/agent`
+
+这让 agents 可以读取项目文件如 `README.md`、`docs/`、`backend/` 等。
+
+### 验证
+
+```bash
+openclaw config get agents.list
+ls ~/.openclaw/agents/opc/agent/
+```
+
+预期输出包含：
+
+```json
+[
+  {
+    "id": "opc",
+    "workspace": "/Users/edison/code/python/opc",
+    "agentDir": "~/.openclaw/agents/opc/agent"
+  }
+]
+```
+
+以及 agent 目录文件：
+
+```
+AGENTS.md  SOUL.md  USER.md
+```
+
+### 使用方式
+
+后端调用使用 `--agent opc` 确保 workspace 正确：
+
+```python
+command = [
+    "openclaw",
+    "agent",
+    "--agent",
+    "opc",
+    "--session-id",
+    session_id,
+    "--message",
+    prompt,
+]
+```
+
 ## OPC OpenClaw 对接
 
 已实现：
